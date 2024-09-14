@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Lecture } from "../convex/posts";
 
-import { TrashIcon, MagnifyingGlassIcon, PersonIcon } from "@radix-ui/react-icons";
+import { TrashIcon, MagnifyingGlassIcon, PersonIcon, QuestionMarkIcon } from "@radix-ui/react-icons";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -75,6 +75,7 @@ export default function HomePage() {
   const [selectedNote, setSelectedNote] = useState<Id<"lectures"> | null>(null);
 
   const [search, setSearch] = useState("");
+  const [question, setQuestion] = useState("");
 
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -303,7 +304,7 @@ export default function HomePage() {
       return (
         <CollapsibleHeading
           key={index}
-          heading={heading} 
+          heading={heading}
           content={<p>{content}</p>}
           isOpen={index === sections.length - 1 ? isOpen : false}
           setIsOpen={setIsOpen}
@@ -311,6 +312,30 @@ export default function HomePage() {
       );
     });
   };
+
+  const submitQuestion = async (event) => {
+    event.preventDefault();
+    console.log(question);
+    let context = lectures?.find(item => item._id === selectedNote)?.transcription || ''
+
+    try {
+      const response = await fetch('http://localhost:8000/api/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question, context }),
+      });
+
+      const answer = await response.json();
+      setQuestion("");
+
+      return answer;
+    } catch (error) {
+      console.error('Error submitting question:', error);
+    }
+  };
+
 
 
   return isAuthenticated ? (
@@ -376,6 +401,8 @@ export default function HomePage() {
                   ))}
                 </div>
 
+
+
               </div>
               <div className="flex flex-col space-y-4 w-full">
                 {selectedNote === null ? (
@@ -387,6 +414,12 @@ export default function HomePage() {
                     <ReactMarkdown>
                       {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
                     </ReactMarkdown>
+                    <div className="relative align-baseline">
+                      <QuestionMarkIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 size-6" />
+                      <form onSubmit={submitQuestion}>
+                        <Input type="text" placeholder="Got a question?" className="!pl-10 min-w-[20rem] bg-white" value={question} onChange={(e) => setQuestion(e.target.value)} />
+                      </form>
+                    </div>
                   </div>
                 )}
                 <div className="flex items-center space-x-2">
