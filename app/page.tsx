@@ -14,9 +14,6 @@ import { Separator } from "@/components/ui/separator";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Slider } from "@/components/ui/slider";
 
-import { ModelSelector } from "./components/model-selector";
-import { models, types } from "./data/models";
-
 import { ScreenSpinner } from "@/app/ScreenSpinner";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "./ModeToggle";
@@ -25,29 +22,19 @@ import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import { Audiogram } from "@/components/ui/line-chart";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Id } from "@/convex/_generated/dataModel";
-
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function HomePage() {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const [generatingNotes, setGeneratingNotes] = useState(false);
-  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const BACKEND_ROOT_URL = "http://localhost:8000";
 
   const [concision, setConcision] = useState([0.5]);
+  const [distractionMode, setDistractionMode] = useState(false);
   const [title, setTitle] = useState("");
-  const [audioRecorder, setAudioRecorder] = useState<MediaRecorder | null>(null);
-  const [noteContent, setNoteContent] = useState('');
-  const audioChunks = useRef<Blob[]>([]);
 
   const [signalSupport, setSignalSupport] = useState({
     "Slow down": true,
@@ -62,6 +49,8 @@ export default function HomePage() {
     "Unpause": "👍",
   };
 
+  const { toast } = useToast();
+
   const lectures = useQuery(api.posts.allLectures);
   const [selectedNote, setSelectedNote] = useState<Id<"lectures"> | null>(null);
 
@@ -70,7 +59,7 @@ export default function HomePage() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
-  const [audioData, setAudioData] = useState<number[]>(new Array(100).fill(100));
+  const [audioData, setAudioData] = useState<number[]>(new Array(200).fill(100));
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const isLookingHistory = useRef<boolean[]>([]);
@@ -127,13 +116,15 @@ export default function HomePage() {
     if (generatingNotes) {
       const intervalId = setInterval(async () => {
         try {
-          // Face detection
-          const faceResponse = await fetch(`${BACKEND_ROOT_URL}/face-detection`);
-          const faceData = await faceResponse.json();
-          const isLooking = faceData.res;
+          let isLooking = true;
 
-          // Update isLooking history
-          isLookingHistory.current = [...isLookingHistory.current.slice(-2), isLooking];
+          // Face detection
+          if (distractionMode) {
+            const faceResponse = await fetch(`${BACKEND_ROOT_URL}/face-detection`);
+            isLooking = (await faceResponse.json()).res;
+            // Update isLooking history
+            isLookingHistory.current = [...isLookingHistory.current.slice(-2), isLooking];
+          }
 
           // Gesture recognition
           const gestureResponse = await fetch(`${BACKEND_ROOT_URL}/gesture-recognition`);
@@ -141,7 +132,10 @@ export default function HomePage() {
 
           // Apply rules
           if (isLookingHistory.current.length === 3 && isLookingHistory.current.every(val => val === false)) {
-            setAlertDialogOpen(true);
+            toast({
+              title: "Detected distraction",
+              description: "We've detected that you're looking away from the screen. We've lowered concision to make the notes more understandable.",
+            });
             setConcision([0.25]);
           } else if (gestureData.handsPrayer) { // Slow down
             setConcision([0.25]);
@@ -265,19 +259,6 @@ export default function HomePage() {
   return isAuthenticated ? (
     <>
       <div className="h-full flex flex-col">
-        <AlertDialog open={alertDialogOpen} >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>You seem distracted!</AlertDialogTitle>
-              <AlertDialogDescription>
-                Our system detected that you seem distracted. We&apos;ve decreased note concision to make the notes more understandable. Let us know when you&apos;re back!
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction onClick={() => setAlertDialogOpen(false)}>Continue</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
         <div className="flex flex-col items-start justify-between space-y-2 py-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
           <h2 className="text-lg font-semibold flex gap-x-2 items-center cursor-pointer"><svg xmlns="http://www.w3.org/2000/svg" className="icon icon-tabler icon-tabler-note size-8 m-auto dark:!text-white" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -295,160 +276,169 @@ export default function HomePage() {
           </div>
         </div>
         <Separator />
-        <div className="h-full py-6 grid grid-cols-4">
-          <div className={"h-full items-stretch col-span-3 overflow-y-hidden pr-8 flex flex-row gap-x-4 w-full"}>
-            <div className={"hidden flex-col space-y-4 sm:flex md:order-2 h-full w-[300px] mx-auto " + (selectedNote ? "!hidden" : "")}>
+        <div className="h-full py-6">
+          <div className="grid grid-cols-5">
+            <div className={"items-stretch col-span-4 overflow-y-hidden pr-8 flex flex-col gap-x-4 w-full"}>
               {/* title, model, concision, signal support */}
-              {selectedNote === null && (
-                <>
-                  <div className="grid gap-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="maxlength" className="font-semibold">Title</Label>
+              <div className="flex flex-row gap-4 items-center mb-4">
+                <Input type="text" placeholder="CS 3110, Lecture 2" value={title} onChange={(e) => setTitle(e.target.value)} />
+
+                <HoverCard openDelay={200}>
+                  <HoverCardTrigger asChild>
+                    <div className="flex flex-row gap-2 items-center">
+                      <Label htmlFor="maxlength" className="font-semibold w-32">Anti-Distraction</Label>
+                      <Switch
+                        id="maxlength"
+                        checked={distractionMode}
+                        onCheckedChange={setDistractionMode}
+                        className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+                        aria-label="Concision"
+                      />
                     </div>
-                    <Input type="text" placeholder="CS 3110, Lecture 2" value={title} onChange={(e) => setTitle(e.target.value)} />
-                  </div>
+                  </HoverCardTrigger>
+                  <HoverCardContent
+                    align="start"
+                    className="w-[260px] text-sm"
+                    side="left"
+                  >
+                    Whether we should warn you and lower concision when we detect you looking away from the screen.
+                  </HoverCardContent>
+                </HoverCard>
 
-                  <ModelSelector types={types} models={models} />
+                <HoverCard openDelay={200}>
+                  <HoverCardTrigger asChild>
+                    <div className="flex flex-row gap-2 items-center">
+                      <Label htmlFor="maxlength" className="font-semibold">Concision</Label>
+                      <span className="w-12 rounded-md border border-transparent px-2 py-0.5 text-right text-sm text-muted-foreground hover:border-border">
+                        {concision}
+                      </span>
+                      <Slider
+                        id="maxlength"
+                        max={1}
+                        value={concision}
+                        step={0.01}
+                        onValueChange={setConcision}
+                        className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 w-20"
+                        aria-label="Concision"
+                      />
+                    </div>
+                  </HoverCardTrigger>
+                  <HoverCardContent
+                    align="start"
+                    className="w-[260px] text-sm"
+                    side="left"
+                  >
+                    How concise the notes should be, by default. May be adjusted based on hand signals or distraction.
+                  </HoverCardContent>
+                </HoverCard>
 
-                  <HoverCard openDelay={200}>
-                    <HoverCardTrigger asChild>
-                      <div className="grid gap-4">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="maxlength" className="font-semibold">Concision</Label>
-                          <span className="w-12 rounded-md border border-transparent px-2 py-0.5 text-right text-sm text-muted-foreground hover:border-border">
-                            {concision}
-                          </span>
+                <div className="!pt-0 !h-0" />
+
+                <HoverCard openDelay={200}>
+                  <HoverCardTrigger asChild>
+                    <div className="flex flex-row flex-nowrap items-center gap-2">
+                      {Object.entries(signalSupport).map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between gap-x-2" onClick={() => setSignalSupport(prev => ({ ...prev, [key]: !value }))}>
+                          <Checkbox checked={value} className="accent-black cursor-pointer" id={key} />
+                          <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
                         </div>
-                        <Slider
-                          id="maxlength"
-                          max={1}
-                          value={concision}
-                          step={0.01}
-                          onValueChange={slowlySetConcision}
-                          className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
-                          aria-label="Concision"
-                        />
-                      </div>
-                    </HoverCardTrigger>
-                    <HoverCardContent
-                      align="start"
-                      className="w-[260px] text-sm"
-                      side="left"
-                    >
-                      How concise the notes should be, by default. May be adjusted based on hand signals or distraction.
-                    </HoverCardContent>
-                  </HoverCard>
+                      ))}
+                    </div>
+                  </HoverCardTrigger>
+                  <HoverCardContent
+                    align="start"
+                    className="w-[260px] text-sm"
+                    side="left"
+                  >
+                    Whether the notes should be generated with signal support, by default. May be adjusted based on hand signals or distraction.
+                  </HoverCardContent>
+                </HoverCard>
 
-                  <div className="!pt-0 !h-0" />
-
-                  <HoverCard openDelay={200}>
-                    <HoverCardTrigger asChild>
-                      <>
-                        <Label className="flex-start ml-0 mr-auto text-start font-semibold">Signal Support</Label>
-                        <div className="flex flex-col gap-y-2 items-start">
-                          {Object.entries(signalSupport).map(([key, value]) => (
-                            <div key={key} className="flex items-center justify-between gap-x-2 !-my-2">
-                              <Input type="checkbox" checked={value} className="accent-black cursor-pointer" id={key} onChange={(e) => setSignalSupport({ ...signalSupport, [key]: e.target.checked })} />
-                              <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    </HoverCardTrigger>
-                    <HoverCardContent
-                      align="start"
-                      className="w-[260px] text-sm"
-                      side="left"
-                    >
-                      Whether the notes should be generated with signal support, by default. May be adjusted based on hand signals or distraction.
-                    </HoverCardContent>
-                  </HoverCard>
-
-                  <div className="flex-grow" />
-                </>
-              )}
-
-              {/* Add camera feed and audiogram */}
-              {(cameraStream || audioStream) && (
-                <div className="mt-4 !mb-[3.5rem] flex flex-col gap-4">
-                  {cameraStream && (
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-auto rounded-md"
-                    />
-                  )}
-                </div>
-              )}
-              {!cameraStream && !audioStream && (
-                <div className="mt-4 !mb-[3.25rem] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full h-40 text-center items-center flex justify-center italic text-xs">
-                  <p>No recording in progress.</p>
-                </div>
-              )}
-            </div>
-            <div className="flex h-full flex-col space-y-4 w-full">
-              {selectedNote === null ? (
-                <div className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
-                  <ReactMarkdown>
-                    {summary || "Your generated, realtime, hand-assisted notes will appear here..."}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <div className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[700px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
-                  <ReactMarkdown>
-                    {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
-                  </ReactMarkdown>
-                </div>
-              )}
-              <div className="flex items-center space-x-2">
+              </div>
+              <div className="flex flex-col space-y-4 w-full">
                 {selectedNote === null ? (
-                  generatingNotes ? (
-                    <Button onClick={() => stopRecording(true)}>Save recording</Button>
-                  ) : (
-                    <Button onClick={startGeneratingNotes}>Start recording</Button>
-                  )
+                  <div className="min-h-[400px] flex-1 p-4 md:min-h-[650px] lg:min-h-[650px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
+                    <ReactMarkdown>
+                      {summary || "Your generated, realtime, hand-assisted notes will appear here..."}
+                    </ReactMarkdown>
+                  </div>
                 ) : (
-                  <Button variant="outline" onClick={() => setSelectedNote(null)}>Back to new note</Button>
+                  <div className="min-h-[400px] flex-1 p-4 md:min-h-[650px] lg:min-h-[650px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[650px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
+                    <ReactMarkdown>
+                      {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
+                    </ReactMarkdown>
+                  </div>
                 )}
-                {!selectedNote && generatingNotes && <>
-                  <Button variant="destructive" onClick={() => stopRecording(false)}>
-                    <span className="sr-only">Cancel generation</span>
-                    <TrashIcon className="h-4 w-4" />
-                  </Button>
-                  {audioStream && (
-                    <div className="w-full">
-                      <Audiogram data={audioData} width={550} height={40} />
-                    </div>
-                  )}</>}
+                <div className="flex items-center space-x-2">
+                  {selectedNote === null ? (
+                    generatingNotes ? (
+                      <Button onClick={() => stopRecording(true)}>Save recording</Button>
+                    ) : (
+                      <Button onClick={startGeneratingNotes}>Start recording</Button>
+                    )
+                  ) : (
+                    <Button variant="outline" onClick={() => setSelectedNote(null)}>Back to new note</Button>
+                  )}
+                  {!selectedNote && generatingNotes && <>
+                    <Button variant="destructive" onClick={() => stopRecording(false)}>
+                      <span className="sr-only">Cancel generation</span>
+                      <TrashIcon className="h-4 w-4" />
+                    </Button>
+                    {audioStream && (
+                      <div className="w-full">
+                        <Audiogram data={audioData} width={850} height={40} />
+                      </div>
+                    )}</>}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="hidden flex-col space-y-4 sm:flex md:order-2 h-full overflow-y-auto border-l pl-8 border-gray-200 dark:border-gray-800">
-            <h2 className="font-semibold text-center underline">Past Notes</h2>
-            <div className="flex flex-col gap-y-4 items-center justify-between max-h-[700px] overflow-y-auto">
-              {lectures === undefined ? (
-                <ScreenSpinner />
-              ) : (
-                lectures
-                  .filter((item: Lecture) =>
-                    item.title.toLowerCase().includes(search.toLowerCase())
-                  )
-                  .map((item: Lecture) => (
-                    <Badge
-                      key={item._id}
-                      variant={selectedNote === item._id ? "default" : "outline"}
-                      className="flex flex-col text-center items-center justify-between !text-sm cursor-pointer"
-                      onClick={() => setSelectedNote(item._id)}
-                    >
-                      <span className="italic mb-0.5">
-                        {item.title}
-                      </span><span>{new Date(item._creationTime).toLocaleTimeString()}&nbsp;&nbsp;&bull;&nbsp;&nbsp;{new Date(item._creationTime).toLocaleDateString()}
-                      </span>
-                    </Badge>
-                  ))
-              )}
+            <div className="hidden flex-col space-y-4 sm:flex md:order-2 h-full overflow-y-auto border-l pl-8 border-gray-200 dark:border-gray-800">
+              <h2 className="font-semibold text-center underline">Past Notes</h2>
+              <div className="flex flex-col gap-y-4 items-center justify-between max-h-[450px] overflow-y-auto">
+                {lectures === undefined ? (
+                  <ScreenSpinner />
+                ) : (
+                  lectures
+                    .filter((item: Lecture) =>
+                      item.title.toLowerCase().includes(search.toLowerCase())
+                    )
+                    .map((item: Lecture) => (
+                      <Badge
+                        key={item._id}
+                        variant={selectedNote === item._id ? "default" : "outline"}
+                        className="flex flex-col text-center items-center justify-between !text-sm cursor-pointer"
+                        onClick={() => setSelectedNote(item._id)}
+                      >
+                        <span className="italic mb-0.5">
+                          {item.title}
+                        </span><span>{new Date(item._creationTime).toLocaleTimeString()}&nbsp;&nbsp;&bull;&nbsp;&nbsp;{new Date(item._creationTime).toLocaleDateString()}
+                        </span>
+                      </Badge>
+                    ))
+                )}
+              </div>
+              <div className="flex-grow" />
+              <div className={"hidden flex-col space-y-4 sm:flex md:order-2 w-[200px] mx-auto " + (selectedNote ? "!hidden" : "")}>
+                {/* Add camera feed and audiogram */}
+                {(cameraStream || audioStream) && (
+                  <div className="mt-4 !mb-[3.5rem] flex flex-col gap-4">
+                    {cameraStream && (
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-auto rounded-md"
+                      />
+                    )}
+                  </div>
+                )}
+                {!cameraStream && !audioStream && (
+                  <div className="mt-4 !mb-[3.25rem] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert h-40 text-center items-center flex justify-center italic text-xs">
+                    <p>No recording in progress.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
