@@ -42,7 +42,7 @@ export function ModelSelector({ models, types, ...props }: ModelSelectorProps) {
   return (
     <div className="grid gap-2">
       <HoverCard openDelay={200}>
-        <HoverCardTrigger asChild>
+        <HoverCardTrigger asChild className="mb-2">
           <Label htmlFor="model">Model</Label>
         </HoverCardTrigger>
         <HoverCardContent
@@ -85,7 +85,7 @@ export function ModelSelector({ models, types, ...props }: ModelSelectorProps) {
                     <h5 className="text-sm font-medium leading-none">
                       Strengths
                     </h5>
-                    <ul className="text-sm text-muted-foreground">
+                    <ul className="text-sm text-muted-foreground p-2">
                       {peekedModel.strengths}
                     </ul>
                   </div>
