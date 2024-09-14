@@ -16,7 +16,7 @@ import { Slider } from "@/components/ui/slider";
 import { ScreenSpinner } from "@/app/ScreenSpinner";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "./ModeToggle";
-import { useState, useRef, useEffect, ReactNode } from "react";
+import React, { useState, useRef, useEffect, ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import { Audiogram } from "@/components/ui/line-chart";
@@ -76,6 +76,7 @@ export default function HomePage() {
 
   const [search, setSearch] = useState("");
   const [question, setQuestion] = useState("");
+  const [askResponse, setAskResponse] = useState("");
 
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -329,6 +330,8 @@ export default function HomePage() {
 
       const answer = await response.json();
       setQuestion("");
+      console.log(answer.response)
+      setAskResponse(answer.response);
 
       return answer;
     } catch (error) {
@@ -401,8 +404,6 @@ export default function HomePage() {
                   ))}
                 </div>
 
-
-
               </div>
               <div className="flex flex-col space-y-4 w-full">
                 {selectedNote === null ? (
@@ -413,6 +414,9 @@ export default function HomePage() {
                   <div className="min-h-[400px] flex-1 p-4 md:min-h-[640px] lg:min-h-[640px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[640px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
                     <ReactMarkdown>
                       {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
+                    </ReactMarkdown>
+                    <ReactMarkdown>
+                      {askResponse}
                     </ReactMarkdown>
                     <div className="relative align-baseline">
                       <QuestionMarkIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 size-6" />
