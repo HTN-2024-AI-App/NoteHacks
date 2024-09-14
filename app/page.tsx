@@ -22,19 +22,33 @@ import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import { Audiogram } from "@/components/ui/line-chart";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+
+// TODO: add modal if distracted.
 
 export default function HomePage() {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const [generatingNotes, setGeneratingNotes] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+
   const [concision, setConcision] = useState([0.5]);
   const [title, setTitle] = useState("");
+
   const [signalSupport, setSignalSupport] = useState({
     "Slow down": true,
     "Speed up": true,
     "Pause": true,
     "Unpause": true,
   });
-
   const nameEmojiMap: Record<string, string> = {
     "Slow down": "🙏",
     "Speed up": "👊",
@@ -200,6 +214,19 @@ More content would go here...`
   return isAuthenticated ? (
     <>
       <div className="h-full flex flex-col">
+        <AlertDialog open={alertDialogOpen} >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>You seem distracted!</AlertDialogTitle>
+              <AlertDialogDescription>
+                Our system detected that you seem distracted. We&apos;ve decreased note concision to make the notes more understandable. Let us know when you&apos;re back!
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setAlertDialogOpen(false)}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <div className="flex flex-col items-start justify-between space-y-2 py-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
           <h2 className="text-lg font-semibold flex gap-x-2 items-center cursor-pointer"><svg xmlns="http://www.w3.org/2000/svg" className="icon icon-tabler icon-tabler-note size-8 m-auto dark:!text-white" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -273,7 +300,7 @@ More content would go here...`
                         <div className="flex flex-col gap-y-2 items-start">
                           {Object.entries(signalSupport).map(([key, value]) => (
                             <div key={key} className="flex items-center justify-between gap-x-2 !-my-2">
-                              <Input type="checkbox" className="accent-black cursor-pointer" id={key} />
+                              <Input type="checkbox" className="accent-black cursor-pointer" id={key} onChange={(e) => setSignalSupport({ ...signalSupport, [key]: e.target.checked })} />
                               <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
                             </div>
                           ))}
