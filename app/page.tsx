@@ -2,7 +2,7 @@
 
 import { SignInButton } from "@clerk/clerk-react";
 import { useConvexAuth } from "convex/react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Lecture } from "../convex/posts";
 
@@ -11,7 +11,6 @@ import { TrashIcon, MagnifyingGlassIcon, PersonIcon } from "@radix-ui/react-icon
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Slider } from "@/components/ui/slider";
 
@@ -72,6 +71,10 @@ export default function HomePage() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
+  const [transcription, setTranscription] = useState("");
+  const [summary, setSummary] = useState("");
+  const createLecture = useMutation(api.posts.createLecture);
+
   useEffect(() => {
     if (cameraStream && videoRef.current) {
       videoRef.current.srcObject = cameraStream;
@@ -118,28 +121,92 @@ export default function HomePage() {
         });
         setCameraStream(videoStream);
         setAudioStream(audioStream);
-        console.log("Camera and audio started successfully");
+
+        // Start processing audio
+        processAudio(audioStream);
       } catch (error) {
-        console.error("Error accessing camera or audio:", error);
+        console.error("Error accessing audio:", error);
       }
     } else {
       console.error("Media devices and getUserMedia are not supported.");
     }
-    // TODO: continuously send to backend.
   };
 
-  const stopRecording = (save: boolean = true) => {
-    // TODO: save notes to backend
-    // Turn off camera and audio
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
+  const processAudio = async (stream: MediaStream) => {
+    const recorder = new MediaRecorder(stream);
+    const chunks: Blob[] = [];
+
+    recorder.ondataavailable = (e) => {
+      chunks.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      const audioBlob = new Blob(chunks, { type: 'audio/wav' });
+      await sendAudioForTranscription(audioBlob);
+    };
+
+    // Record in 5-second intervals
+    const interval = setInterval(() => {
+      recorder.stop();
+      try {
+        recorder.start();
+      } catch (error) {
+        console.error("Error starting recording:", error);
+      }
+    }, 5000);
+
+    recorder.start();
+
+    // Clean up function
+    return () => {
+      clearInterval(interval);
+      recorder.stop();
+    };
+  };
+
+  const sendAudioForTranscription = async (audioBlob: Blob) => {
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.wav');
+
+    try {
+      const response = await fetch('http://localhost:8000/api/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      setTranscription(prev => prev + ' ' + data.transcription);
+
+      // Get summary
+      const summaryResponse = await fetch('http://localhost:8000/api/summarize');
+      const summaryData = await summaryResponse.json();
+      setSummary(summaryData.summary);
+    } catch (error) {
+      console.error('Error sending audio for transcription:', error);
     }
+  };
+
+  const stopRecording = async (save: boolean = true) => {
     if (audioStream) {
       audioStream.getTracks().forEach(track => track.stop());
     }
     setCameraStream(null);
     setAudioStream(null);
     setGeneratingNotes(false);
+
+    if (save) {
+      try {
+        await createLecture({
+          title: title || 'Untitled Lecture',
+          transcription: summary,
+        });
+      } catch (error) {
+        console.error('Error saving lecture:', error);
+      }
+    }
+
+    // Reset states
+    setTranscription("");
+    setSummary("");
   };
 
   return isAuthenticated ? (
@@ -184,9 +251,6 @@ export default function HomePage() {
                   <div className="grid gap-4">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="maxlength" className="font-semibold">Title</Label>
-                      <span className="w-12 rounded-md border border-transparent px-2 py-0.5 text-right text-sm text-muted-foreground hover:border-border">
-                        {title}
-                      </span>
                     </div>
                     <Input type="text" placeholder="CS 3110, Lecture 2" value={title} onChange={(e) => setTitle(e.target.value)} />
                   </div>
@@ -253,7 +317,7 @@ export default function HomePage() {
 
               {/* Add camera feed and audiogram */}
               {(cameraStream || audioStream) && (
-                <div className="mt-4 !mb-[3.25rem] flex flex-col gap-4">
+                <div className="mt-4 !mb-[3.5rem] flex flex-col gap-4">
                   {cameraStream && (
                     <video
                       ref={videoRef}
@@ -273,10 +337,11 @@ export default function HomePage() {
             </div>
             <div className="flex h-full flex-col space-y-4 w-full">
               {selectedNote === null ? (
-                <Textarea
-                  placeholder="Your generated, realtime, hand-assisted notes will appear here..."
-                  className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full"
-                />
+                <div className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
+                  <ReactMarkdown>
+                    {summary || "Your generated, realtime, hand-assisted notes will appear here..."}
+                  </ReactMarkdown>
+                </div>
               ) : (
                 <div className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[700px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
                   <ReactMarkdown>
@@ -295,13 +360,13 @@ export default function HomePage() {
                   <Button variant="outline" onClick={() => setSelectedNote(null)}>Back to new note</Button>
                 )}
                 {!selectedNote && generatingNotes && <>
-                  <Button variant="destructive">
+                  <Button variant="destructive" onClick={() => stopRecording(false)}>
                     <span className="sr-only">Cancel generation</span>
-                    <TrashIcon onClick={() => stopRecording(false)} className="h-4 w-4" />
+                    <TrashIcon className="h-4 w-4" />
                   </Button>
                   {audioStream && (
                     <div className="w-full">
-                      <Audiogram data={audioData} width={500} height={40} />
+                      <Audiogram data={audioData} width={550} height={40} />
                     </div>
                   )}</>}
               </div>
@@ -326,7 +391,7 @@ export default function HomePage() {
                     >
                       <span>
                         {item.title}&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-                        {new Date(item.createdAt).toLocaleDateString()}
+                        {new Date(item._creationTime).toLocaleDateString()}
                       </span>
                     </Badge>
                   ))

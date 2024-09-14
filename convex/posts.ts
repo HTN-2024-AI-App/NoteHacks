@@ -117,3 +117,18 @@ export const create = mutation({
     await ctx.db.patch(author._id, { numPosts: author.numPosts + 1 });
   },
 });
+
+export const createLecture = mutation({
+  args: {
+    title: v.string(),
+    transcription: v.string(),
+  },
+  handler: async (ctx, { title, transcription }) => {
+    const lectureId = await ctx.db.insert("lectures", {
+      title,
+      transcription,
+      createdAt: Date.now(),
+    });
+    return lectureId;
+  },
+});

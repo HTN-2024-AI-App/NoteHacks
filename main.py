@@ -1,19 +1,16 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import io
 import os
 from groq import Groq
 import dotenv
-import numpy as np
 import threading
-from flask import Flask, jsonify
 from groq import Groq
 import base64
 import cv2
 import base64
-import requests
 import os
-import time
 from openai import OpenAI
 import json
 import uvicorn
@@ -21,6 +18,13 @@ import uvicorn
 dotenv.load_dotenv()
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- audio_transcription.py ---
 
@@ -46,14 +50,15 @@ def summarize(old_summary, text_chunks, conciseness=0):
     if conciseness == 0:
         change_consiceness = ""
     else:
-        change_consiceness = f"Make this chunk {'less' if conciseness > 0 else 'more'} detailed."
-    
+        change_consiceness = (
+            f"Make this chunk {'less' if conciseness > 0 else 'more'} detailed."
+        )
+
     if old_summary:
         prev_summary = f"Previous summary: '{old_summary}'."
     else:
         prev_summary = ""
-    prev_summary = "Previous summary: " 
-
+    prev_summary = "Previous summary: "
 
     completion = client.chat.completions.create(
         messages=[
@@ -64,7 +69,7 @@ def summarize(old_summary, text_chunks, conciseness=0):
             {
                 "role": "user",
                 "content": f"{prev_summary}Please update the summary concisely with the following new text {' '.join(text_chunks)}. {change_consiceness}. Do not tell me that this is the summary, just give the summary.",
-            }
+            },
         ],
         model="llama3-8b-8192",
     )
@@ -89,10 +94,13 @@ async def upload_audio(file: UploadFile = File(...)):
     transcription = await transcribe_audio_stream(audio_io)
     texts.append(transcription)
 
+    print(transcription, " has been gotten")
+
     return JSONResponse(content={"transcription": transcription})
 
 
-## -- sumarization -- 
+## -- sumarization --
+
 
 @app.get("/api/summarize")
 async def summarize_audio():
@@ -107,6 +115,7 @@ async def summarize_audio():
     last_seen = len(texts)
 
     return JSONResponse(content={"summary": curr_summary})
+
 
 # --- facedetection.py --
 
@@ -141,14 +150,14 @@ def face_detection_loop():
             break
 
         latest_result = are_eyes_visible(frame)
-        print(f"LOOKING: {latest_result}")
+        # print(f"LOOKING: {latest_result}")
 
     cap.release()
 
 
 @app.route("/face-detection", methods=["GET"])
 def get_latest_result():
-    return jsonify({"res": latest_result})
+    return JSONResponse(content={"res": latest_result})
 
 
 # starting thread
@@ -262,7 +271,6 @@ def gesture_loop():
 
     Ensure the JSON string contains no additional text or deviations from this format."""
 
-
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -274,7 +282,7 @@ def gesture_loop():
         # Capture and query Groq
         base64_image = encode_image(frame)
         latest_result_2 = capture_and_query_chatgpt(prompt, base64_image)
-        print("PRAYING", latest_result_2)
+        # print("PRAYING", latest_result_2)
 
     cap.release()
     cv2.destroyAllWindows()
@@ -282,7 +290,7 @@ def gesture_loop():
 
 @app.route("/gesture-recognition", methods=["GET"])
 def get_latest_result_2():
-    return jsonify({"res": latest_result_2})
+    return JSONResponse(content={"res": latest_result_2})
 
 
 # starting thread
