@@ -31,7 +31,7 @@ def summarize(old_summary, text_chunks, conciseness=0):
     if conciseness == 0:
         change_consiceness = ""
     else:
-        change_consiceness = f"I want this new chunk to be {'less' if conciseness > 0 else 'more'} detailed"
+        change_consiceness = f"Make this chunk {'less' if conciseness > 0 else 'more'} detailed."
     
     prev_summary = "Previous summary: " + old_summary if old_summary else ""
 
