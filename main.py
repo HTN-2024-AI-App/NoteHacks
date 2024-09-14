@@ -214,7 +214,9 @@ def encode_image(image_array):
     return base64.b64encode(buffer).decode("utf-8")
 
 
-def capture_and_query_chatgpt(prompt, image_base64, model="gpt-4o-mini", max_tokens=300):
+def capture_and_query_chatgpt(
+    prompt, image_base64, model="gpt-4o-mini", max_tokens=300
+):
     # Initialize the OpenAI client
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
