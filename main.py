@@ -12,6 +12,9 @@ import os
 from openai import OpenAI
 import json
 import uvicorn
+import time
+from typing import List
+import re
 
 dotenv.load_dotenv()
 
@@ -44,31 +47,42 @@ async def transcribe_audio_stream(audio_chunk):
         return ""
 
 
-def summarize(old_summary, text_chunks, conciseness_delta=0):
+
+def summarize(old_summary: str, text_chunks: List[str], conciseness_delta: int = 0) -> str:
     conciseness_delta = int(conciseness_delta)
     if conciseness_delta == 0:
-        change_consiceness = ""
+        change_conciseness = ""
     else:
-        if conciseness_delta < 0:
-            delta = "more"
-        elif conciseness_delta > 0:
-            delta = "less"
-        change_consiceness = f"Make this new text passage {delta} detailed."
+        delta = "more" if conciseness_delta < 0 else "less"
+        change_conciseness = f"Make this new text passage {delta} detailed."
 
-    if old_summary:
-        prev_summary = f"Previous summary: '{old_summary}'."
-    else:
-        prev_summary = ""
+    prev_summary = f"<previous_key_sentences> '{old_summary}' </previous_key_sentences>"
 
     completion = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": "You are given a text to summarize. If the input text already contains a previous summary, it will be marked with 'Previous summary: [old_summary]'. Your task is to append the new summary to the existing summary, maintaining any existing titles or headings. You may modify the existing summary to incorporate new relevant information, but do not remove or omit the original summary. The new summary should longer than the previous one. Use titles and headings as necessary to organize the content effectively."
+                "content": """You will be given a text to summarize. Follow these steps:
+
+                1. At the beginning of the user input, you'll find a list of previously summarized points.
+                2. Read the new text provided after the previous summary.
+                3. Create a single new summary point for this text:
+                   a. Write an informative heading that provides enough context to understand the content of the following paragraph.
+                   b. Write a concise paragraph summarizing the main points of the new text.
+                4. Add your new summary point to the existing summary.
+                5. Format the entire summary as a Markdown document:
+                   - Use H2 (##) for headings
+                   - Use regular text for paragraphs
+                   - Separate each summary point with a newline
+                6. Ensure your new heading is detailed enough to give a clear idea of the paragraph's content without reading it.
+                7. Keep your new paragraph concise and focused on the main points of the text.
+                8. Return only this Markdown-formatted summary, without any additional explanations or comments.""",
             },
             {
                 "role": "user",
-                "content": f"{prev_summary}Please update the summary concisely with the following new text {' '.join(text_chunks)}. {change_consiceness}. Do not tell me that this is the summary, just give the summary.",
+                "content": f"""{prev_summary}\n
+                            text: {' '.join(text_chunks)}.\n
+                            {change_conciseness}""",
             },
         ],
         model="llama3-8b-8192",
@@ -152,6 +166,7 @@ def face_detection_loop():
 
         latest_result = are_eyes_visible(frame)
         print(f"LOOKING: {latest_result}")
+        time.sleep(1)
 
     cap.release()
 
