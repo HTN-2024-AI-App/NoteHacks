@@ -90,7 +90,7 @@ def face_detection_loop():
     cap.release()
 
 
-@app.route("/face_detection", methods=["GET"])
+@app.route("/face-detection", methods=["GET"])
 def get_latest_result():
     return jsonify({"res": latest_result})
 
@@ -185,7 +185,7 @@ def gesture_loop():
     1. Determine if the person in the image has their hands positioned together in a gesture resembling prayer. This includes recognizing situations where:
        - The hands may be partially visible, possibly being cut off by the edges of the image.
        - The hands are joined or touching in a manner that resembles a prayer position, where the palms or fingers are pressed together.
-    2. Detect if there is a thumbs up gesture present in the image.
+    2. Identify if there are thumbs up visible in the image.
     3. Detect if there is a closed fist present in the image.
     4. Recognize if there is a hand gesture resembling a stop sign (palm facing forward with fingers extended).
 
@@ -218,7 +218,7 @@ def gesture_loop():
     cv2.destroyAllWindows()
 
 
-@app.route("/praying", methods=["GET"])
+@app.route("/gesture-recognition", methods=["GET"])
 def get_latest_result_2():
     return jsonify({"res": latest_result_2})
 
@@ -229,48 +229,7 @@ camera_thread.daemon = (
     True  # Set as a daemon thread so it will close when the main program exits
 )
 camera_thread.start()
-# -- End of gesturedetection.py --
-
-
-@app.post("/gesture-recognition")
-async def gesture_recognition(file: UploadFile = File(...)):
-    contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    base64_image = encode_image(img)
-
-    prompt = """Analyze the image and provide a JSON string with the following information:
-    1. Determine if the person in the image has their hands positioned together in a gesture resembling prayer. This includes recognizing situations where:
-       - The hands may be partially visible, possibly being cut off by the edges of the image.
-       - The hands are joined or touching in a manner that resembles a prayer position, where the palms or fingers are pressed together.
-    2. Identify if there is a flat horizontal palm visible in the image.
-    3. Detect if there is a closed fist present in the image.
-    4. Recognize if there is a hand gesture resembling a stop sign (palm facing forward with fingers extended).
-
-    Please ensure that your analysis considers various possible orientations and positions of the hands to accurately detect these gestures.
-
-    Return the results in the following JSON format:
-    {
-        "handsPrayer": true or false,
-        "flatPalm": true or false,
-        "fist": true or false,
-        "stopSign": true or false
-    }
-
-    Ensure that the JSON string strictly adheres to this format and contains no additional text, escape characters, or deviations from the specified format."""
-
-    result = capture_and_query_chatgpt(prompt, base64_image)
-
-    try:
-        result_json = json.loads(result)
-        return JSONResponse(content=result_json)
-    except json.JSONDecodeError:
-        return JSONResponse(content={"error": "Invalid JSON response"}, status_code=500)
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
 # To run the server, use: uvicorn script_name:app --reload
