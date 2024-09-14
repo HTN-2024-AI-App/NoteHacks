@@ -52,6 +52,15 @@ export const get = query({
   },
 });
 
+export const allLectures = query({
+  handler: async (ctx) => {
+    const lectures = await ctx.db.query("lectures").order("desc").collect();
+    return lectures;
+  },
+});
+
+export type Lecture = Doc<"lectures">;
+
 async function enrichPosts(ctx: QueryCtx, posts: Doc<"posts">[]) {
   return await asyncMap(posts, (post) => enrichPost(ctx, post));
 }

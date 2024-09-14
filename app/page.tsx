@@ -2,6 +2,9 @@
 
 import { SignInButton } from "@clerk/clerk-react";
 import { useConvexAuth } from "convex/react";
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
+import { Lecture } from "../convex/posts";
 
 import { TrashIcon, MagnifyingGlassIcon, PersonIcon } from "@radix-ui/react-icons";
 
@@ -31,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Id } from "@/convex/_generated/dataModel";
 
 
 // TODO: add modal if distracted.
@@ -56,83 +60,10 @@ export default function HomePage() {
     "Unpause": "👍",
   };
 
-  const [history, setHistory] = useState([
-    {
-      title: "CS 3110, Lecture 2",
-      id: "123",
-      createdAt: new Date(),
-      content: `# CS 3110, Lecture 2
+  const lectures = useQuery(api.posts.allLectures);
+  const [selectedNote, setSelectedNote] = useState<Id<"lectures"> | null>(null);
 
-## Introduction to Functional Programming
-
-### Key Concepts
-- **Immutability**: Data doesn't change once created
-- **Pure Functions**: Always return the same output for given inputs
-- **Higher-Order Functions**: Functions that take or return other functions
-
-### Code Example
-\`\`\`ocaml
-let double x = x * 2
-let numbers = [1; 2; 3; 4; 5]
-let doubled_numbers = List.map double numbers
-\`\`\`
-
-### Benefits of Functional Programming
-1. Easier to reason about
-2. Facilitates parallel processing
-3. Reduces side effects
-
-> "Functional programming is like describing your problem to a mathematician." - Unknown
-
-### Next Steps
-- Explore recursion in functional programming
-- Understand lazy evaluation
-- Practice with higher-order functions`
-    }, {
-      title: "CS 3110, Lecture 3",
-      id: "124",
-      createdAt: new Date(),
-      content: `# CS 3110, Lecture 3
-
-## Advanced Functional Concepts
-
-### Topics Covered
-1. Currying
-2. Partial Application
-3. Monads
-
-### Example: Currying
-\`\`\`ocaml
-let add x y = x + y
-let add5 = add 5
-let result = add5 3 (* result is 8 *)
-\`\`\`
-
-More content would go here...`
-    }, {
-      title: "CS 3110, Lecture 4",
-      id: "125",
-      createdAt: new Date(),
-      content: `# CS 3110, Lecture 4
-
-## Functional Data Structures
-
-### Implementing a Functional List
-\`\`\`ocaml
-type 'a mylist = 
-  | Nil
-  | Cons of 'a * 'a mylist
-
-let rec map f = function
-  | Nil -> Nil
-  | Cons (x, xs) -> Cons (f x, map f xs)
-\`\`\`
-
-More content would go here...`
-    },
-  ]);
   const [search, setSearch] = useState("");
-  const [selectedNote, setSelectedNote] = useState<string | null>(null);
 
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -349,7 +280,7 @@ More content would go here...`
               ) : (
                 <div className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[700px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
                   <ReactMarkdown>
-                    {history.find(item => item.id === selectedNote)?.content || ''}
+                    {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
                   </ReactMarkdown>
                 </div>
               )}
@@ -377,15 +308,29 @@ More content would go here...`
             </div>
           </div>
           <div className="hidden flex-col space-y-4 sm:flex md:order-2 h-full overflow-y-auto border-l pl-8 border-gray-200 dark:border-gray-800">
-            {/* title, model, concision, signal support */}
-
             <h2 className="font-semibold text-center underline">Past Notes</h2>
             <div className="flex flex-col gap-y-4 items-center justify-between max-h-[700px] overflow-y-auto">
-              {history.filter(item => item.title.toLowerCase().includes(search.toLowerCase())).map((item) => (
-                <Badge key={item.id} variant={selectedNote === item.id ? "default" : "outline"} className="flex items-center justify-between !text-sm cursor-pointer" onClick={() => setSelectedNote(item.id)}>
-                  <span>{item.title}&nbsp;&nbsp;&bull;&nbsp;&nbsp;{item.createdAt.toLocaleDateString()}</span>
-                </Badge>
-              ))}
+              {lectures === undefined ? (
+                <ScreenSpinner />
+              ) : (
+                lectures
+                  .filter((item: Lecture) =>
+                    item.title.toLowerCase().includes(search.toLowerCase())
+                  )
+                  .map((item: Lecture) => (
+                    <Badge
+                      key={item._id}
+                      variant={selectedNote === item._id ? "default" : "outline"}
+                      className="flex items-center justify-between !text-sm cursor-pointer"
+                      onClick={() => setSelectedNote(item._id)}
+                    >
+                      <span>
+                        {item.title}&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </span>
+                    </Badge>
+                  ))
+              )}
             </div>
           </div>
         </div>
