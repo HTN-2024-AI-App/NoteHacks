@@ -295,7 +295,7 @@ export default function HomePage() {
                         <div className="flex flex-col gap-y-2 items-start">
                           {Object.entries(signalSupport).map(([key, value]) => (
                             <div key={key} className="flex items-center justify-between gap-x-2 !-my-2">
-                              <Input type="checkbox" className="accent-black cursor-pointer" id={key} onChange={(e) => setSignalSupport({ ...signalSupport, [key]: e.target.checked })} />
+                              <Input type="checkbox" checked={value} className="accent-black cursor-pointer" id={key} onChange={(e) => setSignalSupport({ ...signalSupport, [key]: e.target.checked })} />
                               <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
                             </div>
                           ))}
