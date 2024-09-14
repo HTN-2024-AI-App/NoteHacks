@@ -19,9 +19,9 @@ import { ScreenSpinner } from "@/app/ScreenSpinner";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "./ModeToggle";
 import { useState, useRef, useEffect } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
+import { Audiogram } from "@/components/ui/line-chart";
 
 export default function HomePage() {
   const { isLoading, isAuthenticated } = useConvexAuth();
@@ -29,12 +29,19 @@ export default function HomePage() {
   const [concision, setConcision] = useState([0.5]);
   const [title, setTitle] = useState("");
   const [signalSupport, setSignalSupport] = useState({
-    praying: true,
-    speedup: true,
-    pause: true,
-    unpause: true,
-    slowdown: true,
+    "Slow down": true,
+    "Speed up": true,
+    "Pause": true,
+    "Unpause": true,
   });
+
+  const nameEmojiMap: Record<string, string> = {
+    "Slow down": "🙏",
+    "Speed up": "👊",
+    "Pause": "🤚",
+    "Unpause": "🫳",
+  };
+
   const [history, setHistory] = useState([
     {
       title: "CS 3110, Lecture 2",
@@ -115,38 +122,79 @@ More content would go here...`
 
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+  const [audioData, setAudioData] = useState<number[]>(new Array(100).fill(100));
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
   useEffect(() => {
     if (cameraStream && videoRef.current) {
       videoRef.current.srcObject = cameraStream;
     }
-  }, [cameraStream]);
+
+    if (audioStream) {
+      audioContextRef.current = new AudioContext();
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      analyserRef.current.fftSize = 256;
+      const source = audioContextRef.current.createMediaStreamSource(audioStream);
+      source.connect(analyserRef.current);
+
+      const updateAudioData = () => {
+        if (analyserRef.current) {
+          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteTimeDomainData(dataArray);
+          setAudioData(prevData => {
+            const newData = [...prevData.slice(1), Math.max(...Array.from(dataArray))];
+            return newData;
+          });
+        }
+        requestAnimationFrame(updateAudioData);
+      };
+
+      updateAudioData();
+    }
+
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, [cameraStream, audioStream]);
 
   const startGeneratingNotes = async () => {
     setGeneratingNotes(true);
     if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user"
-          }
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" }
         });
-        setCameraStream(stream);
-        console.log("Camera started successfully");
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: true
+        });
+        setCameraStream(videoStream);
+        setAudioStream(audioStream);
+        console.log("Camera and audio started successfully");
       } catch (error) {
-        console.error("Error accessing camera:", error);
+        console.error("Error accessing camera or audio:", error);
       }
     } else {
       console.error("Media devices and getUserMedia are not supported.");
     }
-    // TODO: fetch audio.
-    // TODO: send to backend, display waveform etc.
+    // TODO: continuously send to backend.
   };
 
-  const saveNotes = () => {
+  const stopRecording = (save: boolean = true) => {
     // TODO: save notes to backend
-    // Turn off camera
+    // Turn off camera and audio
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+    if (audioStream) {
+      audioStream.getTracks().forEach(track => track.stop());
+    }
     setCameraStream(null);
+    setAudioStream(null);
+    setGeneratingNotes(false);
   };
 
   return isAuthenticated ? (
@@ -177,7 +225,7 @@ More content would go here...`
                 <>
                   <div className="grid gap-4">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="maxlength">Title</Label>
+                      <Label htmlFor="maxlength" className="font-semibold">Title</Label>
                       <span className="w-12 rounded-md border border-transparent px-2 py-0.5 text-right text-sm text-muted-foreground hover:border-border">
                         {title}
                       </span>
@@ -191,7 +239,7 @@ More content would go here...`
                     <HoverCardTrigger asChild>
                       <div className="grid gap-4">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="maxlength">Concision</Label>
+                          <Label htmlFor="maxlength" className="font-semibold">Concision</Label>
                           <span className="w-12 rounded-md border border-transparent px-2 py-0.5 text-right text-sm text-muted-foreground hover:border-border">
                             {concision}
                           </span>
@@ -221,12 +269,12 @@ More content would go here...`
                   <HoverCard openDelay={200}>
                     <HoverCardTrigger asChild>
                       <>
-                        <Label className="flex-start ml-0 mr-auto text-start">Signal Support</Label>
+                        <Label className="flex-start ml-0 mr-auto text-start font-semibold">Signal Support</Label>
                         <div className="flex flex-col gap-y-2 items-start">
                           {Object.entries(signalSupport).map(([key, value]) => (
-                            <div key={key} className="flex items-center justify-between gap-x-2">
-                              <Checkbox className="!size-4" id={key} />
-                              <Label htmlFor={key}>{key}</Label>
+                            <div key={key} className="flex items-center justify-between gap-x-2 !-my-2">
+                              <Input type="checkbox" className="accent-black cursor-pointer" id={key} />
+                              <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
                             </div>
                           ))}
                         </div>
@@ -245,20 +293,23 @@ More content would go here...`
                 </>
               )}
 
-              {/* Add camera feed below checkboxes */}
-              {cameraStream && (
-                <div className="mt-4 !mb-[3.25rem]">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-auto rounded-md"
-                  />
+              {/* Add camera feed and audiogram */}
+              {(cameraStream || audioStream) && (
+                <div className="mt-4 !mb-[3.25rem] flex flex-col gap-4">
+                  {cameraStream && (
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-auto rounded-md"
+                    />
+                  )}
                 </div>
               )}
-              {!cameraStream && (
-                <div className="mt-4 !mb-[3.25rem] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full h-40">
+              {!cameraStream && !audioStream && (
+                <div className="mt-4 !mb-[3.25rem] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full h-40 text-center items-center flex justify-center italic text-xs">
+                  <p>No recording in progress.</p>
                 </div>
               )}
             </div>
@@ -278,19 +329,23 @@ More content would go here...`
               <div className="flex items-center space-x-2">
                 {selectedNote === null ? (
                   generatingNotes ? (
-                    <Button onClick={saveNotes}>Save recording</Button>
+                    <Button onClick={() => stopRecording(true)}>Save recording</Button>
                   ) : (
                     <Button onClick={startGeneratingNotes}>Start recording</Button>
                   )
                 ) : (
                   <Button variant="outline" onClick={() => setSelectedNote(null)}>Back to new note</Button>
                 )}
-                {!selectedNote && <>
+                {!selectedNote && generatingNotes && <>
                   <Button variant="destructive">
                     <span className="sr-only">Cancel generation</span>
-                    <TrashIcon className="h-4 w-4" />
+                    <TrashIcon onClick={() => stopRecording(false)} className="h-4 w-4" />
                   </Button>
-                  <p>TODO: audiogram.</p></>}
+                  {audioStream && (
+                    <div className="w-full">
+                      <Audiogram data={audioData} width={500} height={40} />
+                    </div>
+                  )}</>}
               </div>
             </div>
           </div>
