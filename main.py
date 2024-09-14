@@ -16,10 +16,11 @@ import os
 import time
 from openai import OpenAI
 import json
+import uvicorn
 
 dotenv.load_dotenv()
 
-app = Flask(__name__)
+app = FastAPI()
 
 # --- audio_transcription.py ---
 
@@ -51,11 +52,13 @@ async def upload_audio(file: UploadFile = File(...)):
     return JSONResponse(content={"transcription": transcription})
 
 
-# --- facedetection.py -- 
+# --- facedetection.py --
 
 # Load pre-trained Haar cascades for face and eye detection
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+face_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
+eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
 
 # Global variable to store the latest result
 latest_result = False
@@ -64,12 +67,13 @@ latest_result = False
 def are_eyes_visible(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-    for (x, y, w, h) in faces:
-        roi_gray = gray[y:y+h, x:x+w]
+    for x, y, w, h in faces:
+        roi_gray = gray[y : y + h, x : x + w]
         eyes = eye_cascade.detectMultiScale(roi_gray)
         if len(eyes) > 0:
             return True
     return False
+
 
 def face_detection_loop():
     global latest_result
@@ -79,32 +83,35 @@ def face_detection_loop():
         ret, frame = cap.read()
         if not ret:
             break
-        
+
         latest_result = are_eyes_visible(frame)
         print(f"LOOKING: {latest_result}")
 
-
     cap.release()
 
-@app.route('/face_detection', methods=['GET'])
+
+@app.route("/face_detection", methods=["GET"])
 def get_latest_result():
     return jsonify({"res": latest_result})
 
 
 # starting thread
 camera_thread = threading.Thread(target=face_detection_loop)
-camera_thread.daemon = True  # Set as a daemon thread so it will close when the main program exits
+camera_thread.daemon = (
+    True  # Set as a daemon thread so it will close when the main program exits
+)
 camera_thread.start()
 # ----- End of facedetection.py -----
 
 
-
 latest_result_2 = False
+
 
 # Function to encode the image
 def encode_image(image_array):
-    _, buffer = cv2.imencode('.jpg', image_array)
-    return base64.b64encode(buffer).decode('utf-8')
+    _, buffer = cv2.imencode(".jpg", image_array)
+    return base64.b64encode(buffer).decode("utf-8")
+
 
 def capture_and_query_chatgpt(prompt, image_base64, model="gpt-4o", max_tokens=300):
     # Initialize the OpenAI client
@@ -118,20 +125,16 @@ def capture_and_query_chatgpt(prompt, image_base64, model="gpt-4o", max_tokens=3
                 {"type": "text", "text": prompt},
                 {
                     "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{image_base64}"
-                    }
-                }
-            ]
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"},
+                },
+            ],
         }
     ]
 
     try:
         # Send the request to the ChatGPT API
         response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens
+            model=model, messages=messages, max_tokens=max_tokens
         )
 
         # Return the content of the response
@@ -173,9 +176,69 @@ def query_groq(prompt, base64_image):
 
     return response_json
 
+
 def gesture_loop():
     global latest_result_2
     cap = cv2.VideoCapture(0)  # Use default camera
+
+    prompt = """Analyze the image and provide a JSON string with the following information:
+    1. Determine if the person in the image has their hands positioned together in a gesture resembling prayer. This includes recognizing situations where:
+       - The hands may be partially visible, possibly being cut off by the edges of the image.
+       - The hands are joined or touching in a manner that resembles a prayer position, where the palms or fingers are pressed together.
+    2. Detect if there is a thumbs up gesture present in the image.
+    3. Detect if there is a closed fist present in the image.
+    4. Recognize if there is a hand gesture resembling a stop sign (palm facing forward with fingers extended).
+
+    Please ensure that your analysis considers various possible orientations and positions of the hands to accurately detect these gestures.
+
+    Return the results in the following JSON format:
+    {
+        "handsPrayer": true or false,
+        "thumbsUp": true or false,
+        "fist": true or false,
+        "stopSign": true or false
+    }
+
+    Ensure that the JSON string strictly adheres to this format and contains no additional text, escape characters, or deviations from the specified format."""
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Show the image in a window
+        # cv2.imshow('Camera Feed', frame)
+
+        # Capture and query Groq
+        base64_image = encode_image(frame)
+        latest_result_2 = capture_and_query_chatgpt(prompt, base64_image)
+        print("PRAYING", latest_result_2)
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+@app.route("/praying", methods=["GET"])
+def get_latest_result_2():
+    return jsonify({"res": latest_result_2})
+
+
+# starting thread
+camera_thread = threading.Thread(target=gesture_loop)
+camera_thread.daemon = (
+    True  # Set as a daemon thread so it will close when the main program exits
+)
+camera_thread.start()
+# -- End of gesturedetection.py --
+
+
+@app.post("/gesture-recognition")
+async def gesture_recognition(file: UploadFile = File(...)):
+    contents = await file.read()
+    nparr = np.frombuffer(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    base64_image = encode_image(img)
 
     prompt = """Analyze the image and provide a JSON string with the following information:
     1. Determine if the person in the image has their hands positioned together in a gesture resembling prayer. This includes recognizing situations where:
@@ -197,38 +260,17 @@ def gesture_loop():
 
     Ensure that the JSON string strictly adheres to this format and contains no additional text, escape characters, or deviations from the specified format."""
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
-        # Show the image in a window
-        # cv2.imshow('Camera Feed', frame)
-        
-        # Capture and query Groq
-        base64_image = encode_image(frame)
-        latest_result_2 = capture_and_query_chatgpt(prompt, base64_image)
-        print("PRAYING", latest_result_2)
+    result = capture_and_query_chatgpt(prompt, base64_image)
 
-    
-    cap.release()
-    cv2.destroyAllWindows()
-
-
-@app.route('/praying', methods=['GET'])
-def get_latest_result_2():
-    return jsonify({"res": latest_result_2})
-
-# starting thread
-camera_thread = threading.Thread(target=gesture_loop)
-camera_thread.daemon = True  # Set as a daemon thread so it will close when the main program exits
-camera_thread.start()
-# -- End of gesturedetection.py --
-
+    try:
+        result_json = json.loads(result)
+        return JSONResponse(content=result_json)
+    except json.JSONDecodeError:
+        return JSONResponse(content={"error": "Invalid JSON response"}, status_code=500)
 
 
 if __name__ == "__main__":
-    app.run(port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
 # To run the server, use: uvicorn script_name:app --reload

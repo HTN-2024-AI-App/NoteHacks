@@ -53,7 +53,7 @@ export default function HomePage() {
     "Slow down": "🙏",
     "Speed up": "👊",
     "Pause": "🤚",
-    "Unpause": "🫳",
+    "Unpause": "👍",
   };
 
   const [history, setHistory] = useState([
