@@ -38,8 +38,12 @@ def summarize(old_summary, text_chunks, conciseness=0):
     completion = client.chat.completions.create(
         messages=[
             {
+                "role": "system",
+                "content": f"You are a summarizer who summarizes texts succinctly.",
+            },
+            {
                 "role": "user",
-                "content": f"{prev_summary}. Please update the summary concisely with the following new text {' '.join(text_chunks)}. {change_consiceness}",
+                "content": f"{prev_summary}. Please update the summary concisely with the following new text {' '.join(text_chunks)}. {change_consiceness}. Do not tell me that this is the summary, just give the summary.",
             }
         ],
         model="llama3-8b-8192",
@@ -47,10 +51,11 @@ def summarize(old_summary, text_chunks, conciseness=0):
 
     content = completion.choices[0].message.content
 
-    return content  # TODO: remove the assistant helper messages
+    return content
 
 
 texts = []
+last_seen = 0
 curr_summary = ""
 
 
@@ -68,12 +73,20 @@ async def upload_audio(file: UploadFile = File(...)):
 
 
 @app.get("/api/summarize")
-async def summarize():
+async def summarize_audio():
     global texts
     global curr_summary
+    global last_seen
 
-    curr_summary = summarize(curr_summary, texts[-1:])
+    if len(texts) == 0:
+        return JSONResponse(content={"summary": "No transcriptions available"})
+
+    curr_summary = summarize(curr_summary, texts[last_seen:])
+    last_seen = len(texts)
 
     return JSONResponse(content={"summary": curr_summary})
 
 # To run the server, use: uvicorn script_name:app --reload
+
+import uvicorn
+uvicorn.run(app, host="0.0.0.0", port=8080)
