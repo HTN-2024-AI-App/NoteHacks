@@ -88,5 +88,5 @@ async def summarize_audio():
 
 # To run the server, use: uvicorn script_name:app --reload
 
-import uvicorn
-uvicorn.run(app, host="0.0.0.0", port=8080)
+# import uvicorn
+# uvicorn.run(app, host="0.0.0.0", port=8080)
