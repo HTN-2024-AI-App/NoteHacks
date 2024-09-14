@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+main {
+  @apply mx-auto w-[600px];
+}
+
+ul {
+  @apply border-l border-r border-t;
+}
+
+li {
+  @apply p-4 border-b flex gap-2;
+}
+
+li > div {
+  @apply flex flex-col;
+}
+
+li > div > div {
+  @apply flex gap-1;
+}
+
+li .name {
+  @apply font-bold;
+}
+
+li .username {
+  @apply text-slate-500;
+}
+
+li .time {
+  @apply text-slate-600;
+}
+
+.composer {
+  @apply border-r border-l;
+}
+
+.composer > div:first-child {
+  @apply flex p-4 gap-2;
+}
+
+.composer form {
+  @apply flex gap-2 flex-grow;
+}
+
+input[type="text"] {
+  @apply w-full py-2 px-4;
+}
+
+button,
+.composer button[type="submit"] {
+  @apply rounded bg-slate-200 py-2 px-4;
+}
+
+button[disabled],
+.composer button[type="submit"][disabled] {
+  @apply text-slate-400;
+}
+
+.composer .characterLimit {
+  @apply h-1 bg-gray-300;
+}
+
+.composer .characterLimit.characterLimitOver {
+  @apply bg-red-400;
+}
+
+.composer .error {
+  @apply text-red-400 py-2 px-4;
+}
+
+ul li img {
+  @apply w-10 h-10 rounded-full;
+}
+
+.cl-avatarBox {
+  @apply w-[2.5rem] h-[2.5rem];
+}
+
+.authorButton {
+  @apply min-w-[2.5rem] min-h-[2.5rem];
+}
+
+.profile {
+  @apply border-r border-l p-4 bg-gradient-to-b from-slate-300 to-white;
+}
+
+.profile > div {
+  @apply flex gap-1;
+}
+
+.profile h1 {
+  @apply font-bold text-2xl;
+}
+
+.profile h2 {
+  @apply text-slate-500;
+}
+
+.profile img {
+  @apply w-20 h-20 rounded-full border-2 border-white;
+}
