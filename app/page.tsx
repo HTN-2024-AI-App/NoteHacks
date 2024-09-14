@@ -22,6 +22,7 @@ import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import { Audiogram } from "@/components/ui/line-chart";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,9 @@ export default function HomePage() {
 
   const [concision, setConcision] = useState([0.5]);
   const [title, setTitle] = useState("");
+  const [audioRecorder, setAudioRecorder] = useState<MediaRecorder | null>(null);
+  const [noteContent, setNoteContent] = useState('');
+  const audioChunks = useRef<Blob[]>([]);
 
   const [signalSupport, setSignalSupport] = useState({
     "Slow down": true,
@@ -141,6 +145,72 @@ More content would go here...`
   const analyserRef = useRef<AnalyserNode | null>(null);
   const isLookingHistory = useRef<boolean[]>([]);
 
+
+  useEffect(() => {
+    if (generatingNotes) {
+      startAudioRecording();
+    } else {
+      stopAudioRecording();
+    }
+  }, [generatingNotes]);
+
+  const startAudioRecording = async () => {
+    if (audioStream) {
+      const recorder = new MediaRecorder(audioStream);
+      setAudioRecorder(recorder);
+
+      recorder.ondataavailable = (event) => {
+        audioChunks.current.push(event.data);
+      };
+
+      recorder.start();
+
+      // Set up interval to send audio every 10 seconds
+      const intervalId = setInterval(sendAudioToBackend, 5000);
+
+      // Store the interval ID to clear it later
+      return () => clearInterval(intervalId);
+    }
+  };
+
+  const stopAudioRecording = () => {
+    if (audioRecorder) {
+      audioRecorder.stop();
+    }
+  };
+
+  const sendAudioToBackend = async () => {
+    if (audioChunks.current.length > 0) {
+      const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+
+      console.log('Sending audio to backend...');
+      try {
+        const response = await fetch(`http://localhost:8000/api/transcribe`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          updateNoteContent(data.transcription);
+        } else {
+          console.error('Failed to process audio');
+        }
+      } catch (error) {
+        console.error('Error sending audio to backend:', error);
+      }
+
+      // Clear the audio chunks after sending
+      audioChunks.current = [];
+    }
+  };
+
+  const updateNoteContent = (newContent: string) => {
+    setNoteContent((prevContent) => prevContent + '\n' + newContent);
+  };
+
   useEffect(() => {
     if (cameraStream && videoRef.current) {
       videoRef.current.srcObject = cameraStream;
@@ -234,6 +304,7 @@ More content would go here...`
     }
     // TODO: continuously send to backend.
   };
+  
 
   const stopRecording = (save: boolean = true) => {
     // TODO: save notes to backend
@@ -379,11 +450,13 @@ More content would go here...`
               )}
             </div>
             <div className="flex h-full flex-col space-y-4 w-full">
-              {selectedNote === null ? (
-                <Textarea
-                  placeholder="Your generated, realtime, hand-assisted notes will appear here..."
-                  className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full"
-                />
+            {selectedNote === null ? (
+              <Textarea
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="Your generated, realtime, hand-assisted notes will appear here..."
+                className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full"
+              />
               ) : (
                 <div className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[700px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
                   <ReactMarkdown>

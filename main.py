@@ -99,6 +99,8 @@ async def upload_audio(file: UploadFile = File(...)):
     transcription = await transcribe_audio_stream(audio_io)
     texts.append(transcription)
 
+    print(texts)
+
     return JSONResponse(content={"transcription": transcription})
 
 
@@ -154,7 +156,8 @@ def face_detection_loop():
             break
 
         latest_result = are_eyes_visible(frame)
-        print(f"LOOKING: {latest_result}")
+        # print(f"LOOKING: {latest_result}")
+
 
     cap.release()
 
@@ -187,7 +190,7 @@ def encode_image(image_array):
     return base64.b64encode(buffer).decode("utf-8")
 
 
-def capture_and_query_chatgpt(prompt, image_base64, model="gpt-4o", max_tokens=300):
+def capture_and_query_chatgpt(prompt, image_base64, model="gpt-4o-mini", max_tokens=300):
     # Initialize the OpenAI client
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
@@ -300,7 +303,7 @@ def gesture_loop():
                 "stopSign": False,
             }
 
-        print("GESTURES", latest_result_2)
+        # print("GESTURES", latest_result_2)
 
     cap.release()
     cv2.destroyAllWindows()
