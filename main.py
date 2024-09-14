@@ -152,7 +152,7 @@ async def ask_question(request: dict):
         messages=[
             {
                 "role": "system",
-                "content": f"You are given the following context: '{context}' and the user is giving you inputs based on this context. Respond in markdown format, using headers if necessary."
+                "content": f"You are given the following context: '{context}' and the user is giving you inputs based on this context."
             },
             {
                 "role": "user",
