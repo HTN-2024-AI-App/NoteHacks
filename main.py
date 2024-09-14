@@ -49,25 +49,27 @@ async def transcribe_audio_stream(audio_chunk):
         return ""
 
 
-def summarize(old_summary, text_chunks, conciseness=0):
-    if conciseness == 0:
+def summarize(old_summary, text_chunks, conciseness_delta=0):
+    conciseness_delta = int(conciseness_delta)
+    if conciseness_delta == 0:
         change_consiceness = ""
     else:
-        change_consiceness = (
-            f"Make this chunk {'less' if conciseness > 0 else 'more'} detailed."
-        )
+        if conciseness_delta < 0:
+            delta = "more"
+        elif conciseness_delta > 0:
+            delta = "less"
+        change_consiceness = f"Make this new text passage {delta} detailed."
 
     if old_summary:
         prev_summary = f"Previous summary: '{old_summary}'."
     else:
         prev_summary = ""
-    prev_summary = "Previous summary: "
 
     completion = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": f"You are a summarizer who summarizes texts succinctly.",
+                "content": f"You summarize texts succinctly and returns the summary in markdown.",
             },
             {
                 "role": "user",
@@ -104,7 +106,8 @@ async def upload_audio(file: UploadFile = File(...)):
 
 
 @app.get("/api/summarize")
-async def summarize_audio():
+async def summarize_audio(conciseness_delta=0):
+    # e.g.: /api/summarize?conciseness_delta=0
     global texts
     global curr_summary
     global last_seen
@@ -112,7 +115,7 @@ async def summarize_audio():
     if len(texts) == 0:
         return JSONResponse(content={"summary": "No transcriptions available"})
 
-    curr_summary = summarize(curr_summary, texts[last_seen:])
+    curr_summary = summarize(curr_summary, texts[last_seen:], conciseness_delta)
     last_seen = len(texts)
 
     return JSONResponse(content={"summary": curr_summary})
