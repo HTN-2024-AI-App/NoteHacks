@@ -11,7 +11,7 @@ export default defineSchema({
   })
     .index("tokenIdentifier", ["tokenIdentifier"])
     .index("username", ["username"]),
-    
+
   posts: defineTable({
     authorId: v.id("users"),
     text: v.string(),
@@ -20,6 +20,6 @@ export default defineSchema({
   lectures: defineTable({
     title: v.string(),
     transcription: v.string(), // Markdown transcription
-    createdAt: v.date(),
+    createdAt: v.number(), // Store createdAt as a timestamp
   }).index("title", ["title"]),
 });

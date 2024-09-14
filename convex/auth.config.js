@@ -1,7 +1,7 @@
 const config = {
   providers: [
     {
-      domain: process.env.CLERK_JWT_ISSUER_DOMAIN,
+      domain: 'https://sensible-toad-7.clerk.accounts.dev/',
       applicationID: "convex",
     },
   ],

@@ -5,6 +5,7 @@ import { QueryCtx, mutation, query } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 import { getUser } from "./users";
 import { CHARACTER_LIMIT } from "./shared";
+export { default as saveTranscription } from "./saveTranscription";
 
 export const all = query({
   args: { paginationOpts: paginationOptsValidator },
