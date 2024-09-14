@@ -1,4 +1,8 @@
-import { Metadata } from "next";
+"use client";
+
+import { SignInButton } from "@clerk/clerk-react";
+import { useConvexAuth } from "convex/react";
+
 import Image from "next/image";
 import { CounterClockwiseClockIcon } from "@radix-ui/react-icons";
 
@@ -30,13 +34,12 @@ import { TopPSelector } from "./components/top-p-selector";
 import { models, types } from "./data/models";
 import { presets } from "./data/presets";
 
-export const metadata: Metadata = {
-  title: "Playground",
-  description: "The OpenAI Playground built using the components.",
-};
+import { ScreenSpinner } from "@/app/ScreenSpinner";
 
-export default function PlaygroundPage() {
-  return (
+
+export function HomePage() {
+  const { isLoading, isAuthenticated } = useConvexAuth();
+  return isAuthenticated ? (
     <>
       <div className="md:hidden">
         <Image
@@ -325,5 +328,7 @@ export default function PlaygroundPage() {
         </Tabs>
       </div>
     </>
+  ) : (
+    isLoading ? <ScreenSpinner /> : <div className="lds-screen-container"><SignInButton /></div>
   );
 }

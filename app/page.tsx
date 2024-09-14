@@ -1,11 +1,13 @@
-import { AllPosts } from "./AllPosts";
-import { SignInOrComposer } from "./SignInOrComposer";
+import { Metadata } from "next";
+import { HomePage } from "./HomePage";
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: "Playground",
+  description: "The OpenAI Playground built using the components.",
+};
+
+export default function HomePageWithMetadata() {
   return (
-    <main>
-      <SignInOrComposer />
-      <AllPosts />
-    </main>
+    <HomePage />
   );
 }
