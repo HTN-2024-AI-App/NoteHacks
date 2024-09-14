@@ -268,20 +268,29 @@ export default function HomePage() {
     if (!summary) {
       return "Your generated, realtime, hand-assisted notes will appear here...";
     }
-
-    const sections = summary.split('\n\n');
+  
+    // Split sections and filter out empty lines
+    
+    const sections = summary.split('#').filter(section => section.trim() !== '' || section !== "#");
+    
     return sections.map((section, index) => {
-      const [heading, ...contentLines] = section.split('\n');
-      const content = contentLines.join('\n');
+      // Split each section into heading and content, filtering out empty content lines
+      if (section.trim() === '' || section.length <= 1) return null;
+      const [heading, ...contentLines] = section.split('\n').filter(line => line.trim() !== '');
+      const content = contentLines.join(' '); // Join content lines into a single paragraph
+
+      if (content.trim() === '') return null;
+  
       return (
         <CollapsibleHeading 
           key={index} 
-          heading={heading.replace(/^#+\s/, '')} 
+          heading={heading} 
           content={<p>{content}</p>} 
         />
       );
     });
   };
+  
 
   return isAuthenticated ? (
     <>

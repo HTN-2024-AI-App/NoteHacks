@@ -22,10 +22,10 @@ const CollapsibleHeading: React.FC<CollapsibleHeadingProps> = ({ heading, conten
         ) : (
           <ChevronRightIcon className="mr-2" />
         )}
-        <h3 className="text-lg font-semibold">{heading}</h3>
+        <p className="text-lg font-semibold !py-0">{heading}</p>
       </div>
       {isOpen && (
-        <div className="mt-2 ml-6">
+        <div className="-mt-6 ml-6 -mb-2">
           {content}
         </div>
       )}

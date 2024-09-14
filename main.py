@@ -102,7 +102,7 @@ def summarize(old_summary: str, text_chunks: List[str], conciseness_delta: int =
     content = completion.choices[0].message.content
 
     content = content.replace("<previous_key_sentences>", "").replace("</previous_key_sentences>", "").strip()
-    print(content)
+    print("CONTENT", content)
 
     return content
 
