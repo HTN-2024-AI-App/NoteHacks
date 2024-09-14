@@ -1,16 +1,14 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import io
 import os
 from groq import Groq
 import dotenv
 import numpy as np
 import threading
-from flask import Flask, jsonify
-from groq import Groq
 import base64
 import cv2
-import base64
 import requests
 import os
 import time
@@ -21,6 +19,15 @@ import uvicorn
 dotenv.load_dotenv()
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 # --- audio_transcription.py ---
 
@@ -46,14 +53,15 @@ def summarize(old_summary, text_chunks, conciseness=0):
     if conciseness == 0:
         change_consiceness = ""
     else:
-        change_consiceness = f"Make this chunk {'less' if conciseness > 0 else 'more'} detailed."
-    
+        change_consiceness = (
+            f"Make this chunk {'less' if conciseness > 0 else 'more'} detailed."
+        )
+
     if old_summary:
         prev_summary = f"Previous summary: '{old_summary}'."
     else:
         prev_summary = ""
-    prev_summary = "Previous summary: " 
-
+    prev_summary = "Previous summary: "
 
     completion = client.chat.completions.create(
         messages=[
@@ -64,7 +72,7 @@ def summarize(old_summary, text_chunks, conciseness=0):
             {
                 "role": "user",
                 "content": f"{prev_summary}Please update the summary concisely with the following new text {' '.join(text_chunks)}. {change_consiceness}. Do not tell me that this is the summary, just give the summary.",
-            }
+            },
         ],
         model="llama3-8b-8192",
     )
@@ -92,7 +100,8 @@ async def upload_audio(file: UploadFile = File(...)):
     return JSONResponse(content={"transcription": transcription})
 
 
-## -- sumarization -- 
+## -- sumarization --
+
 
 @app.get("/api/summarize")
 async def summarize_audio():
@@ -107,6 +116,7 @@ async def summarize_audio():
     last_seen = len(texts)
 
     return JSONResponse(content={"summary": curr_summary})
+
 
 # --- facedetection.py --
 
@@ -146,9 +156,9 @@ def face_detection_loop():
     cap.release()
 
 
-@app.route("/face-detection", methods=["GET"])
-def get_latest_result():
-    return jsonify({"res": latest_result})
+@app.get("/face-detection")
+async def get_latest_result():
+    return {"res": latest_result}
 
 
 # starting thread
@@ -160,7 +170,12 @@ camera_thread.start()
 # ----- End of facedetection.py -----
 
 
-latest_result_2 = False
+latest_result_2 = {
+    "handsPrayer": False,
+    "thumbsUp": False,
+    "fist": False,
+    "stopSign": False,
+}
 
 
 # Function to encode the image
@@ -262,27 +277,35 @@ def gesture_loop():
 
     Ensure the JSON string contains no additional text or deviations from this format."""
 
-
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
-        # Show the image in a window
-        # cv2.imshow('Camera Feed', frame)
-
-        # Capture and query Groq
+        # Capture and query ChatGPT
         base64_image = encode_image(frame)
-        latest_result_2 = capture_and_query_chatgpt(prompt, base64_image)
-        print("PRAYING", latest_result_2)
+        result = capture_and_query_chatgpt(prompt, base64_image)
+
+        try:
+            latest_result_2 = json.loads(result)
+        except json.JSONDecodeError:
+            print(f"Error parsing JSON: {result}")
+            latest_result_2 = {
+                "handsPrayer": False,
+                "thumbsUp": False,
+                "fist": False,
+                "stopSign": False,
+            }
+
+        print("GESTURES", latest_result_2)
 
     cap.release()
     cv2.destroyAllWindows()
 
 
-@app.route("/gesture-recognition", methods=["GET"])
-def get_latest_result_2():
-    return jsonify({"res": latest_result_2})
+@app.get("/gesture-recognition")
+async def get_latest_result_2():
+    return latest_result_2  # Now returns the JSON object directly
 
 
 # starting thread
