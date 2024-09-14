@@ -62,19 +62,31 @@ def summarize(old_summary: str, text_chunks: List[str], conciseness_delta: int =
         messages=[
             {
                 "role": "system",
-                "content": """You will be given a text to summarize. Follow these steps:
+                "content": """
+                    You will be given a text to summarize. Follow these steps:
 
-                1. At the beginning of the user input, you'll find a list of previously summarized points enclosed in <previous_key_sentences> tags. The text in <previous_key_sentences> is just for context, you should copy it without changing it. You shoud not include the tags in your response.
-                2. Read the new text provided after the previous summary and create a single new summary point for this text:
-                   a. Write an informative heading that provides enough context to understand the content of the following paragraph.
-                   b. Write a concise paragraph summarizing the main points of the new text.
-                3. Format the entire summary as a Markdown document:
-                   - Use H2 (##) for headings
-                   - Use regular text for paragraphs
-                   - Separate each summary point with a newline
-                4. Ensure your new heading is detailed enough to give a clear idea of the paragraph's content without reading it.
-                5. Keep your new paragraph concise and focused on the main points of the text.
-                6. Return only previous_key_sentences and the new summary all in a Markdown formatting, without any additional explanations or comments. Nothing else other than the summary should be returned. """,
+                    1. At the beginning of the user input, you'll find a list of previously summarized points enclosed in <previous_key_sentences> tags. Copy this content exactly as it appears, without the tags, at the beginning of your response.
+
+                    2. Read the new text provided after the previous summary and create a new summary point:
+                    a. Write an informative heading that clearly indicates the main topic or key idea of the following paragraph.
+                    b. Write a concise paragraph summarizing the main points of the new text.
+
+                    3. If the new text is closely related to the immediately preceding point, instead of adding a new heading and paragraph, modify the existing one to incorporate the new information.
+
+                    4. Format the entire summary as a Markdown document:
+                    - Use only H2 (##) for headings. No other heading levels are allowed.
+                    - Use regular text for paragraphs. Each heading should be followed by a paragraph.
+                    - Always follow a heading with a paragraph
+                    - Separate each heading and paragraph with a blank line
+
+                    5. Ensure each heading is detailed and informative, providing a clear idea of the paragraph's content without needing to read it.
+
+                    6. Keep each paragraph concise and focused on the main points of the text.
+
+                    7. Your response should contain only:
+                    a. The previous key sentences (without tags)
+                    b. The new or updated summary point
+                    Both formatted in Markdown as described above. Do not include any additional explanations or comments.""",
             },
             {
                 "role": "user",
@@ -86,7 +98,11 @@ def summarize(old_summary: str, text_chunks: List[str], conciseness_delta: int =
         model="llama3-8b-8192",
     )
 
+
     content = completion.choices[0].message.content
+
+    content = content.replace("<previous_key_sentences>", "").replace("</previous_key_sentences>", "").strip()
+    print(content)
 
     return content
 
