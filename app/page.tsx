@@ -418,8 +418,8 @@ More content would go here...`
             <h2 className="font-semibold text-center underline">Past Notes</h2>
             <div className="flex flex-col gap-y-4 items-center justify-between max-h-[700px] overflow-y-auto">
               {history.filter(item => item.title.toLowerCase().includes(search.toLowerCase())).map((item) => (
-                <Badge key={item.id} variant={selectedNote === item.id ? "default" : "outline"} className="flex items-center justify-between !text-sm cursor-pointer" onClick={() => setSelectedNote(item.id)}>
-                  <span>{item.title}&nbsp;&nbsp;&bull;&nbsp;&nbsp;{item.createdAt.toLocaleDateString()}</span>
+                <Badge key={item.id} variant={selectedNote === item.id ? "default" : "outline"} className="flex flex-col items-center justify-between !text-sm cursor-pointer" onClick={() => setSelectedNote(item.id)}>
+                  <span className="text-center italic underline mb-0.5">{item.title}</span><span className="text-center">{item.createdAt.toLocaleDateString()}&nbsp;&nbsp;&bull;&nbsp;&nbsp;{item.createdAt.toLocaleTimeString()}</span>
                 </Badge>
               ))}
             </div>
