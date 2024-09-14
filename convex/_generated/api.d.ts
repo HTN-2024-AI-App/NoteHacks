@@ -15,6 +15,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as posts from "../posts.js";
+import type * as saveTranscription from "../saveTranscription.js";
 import type * as shared from "../shared.js";
 import type * as users from "../users.js";
 
@@ -28,6 +29,7 @@ import type * as users from "../users.js";
  */
 declare const fullApi: ApiFromModules<{
   posts: typeof posts;
+  saveTranscription: typeof saveTranscription;
   shared: typeof shared;
   users: typeof users;
 }>;

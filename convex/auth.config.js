@@ -1,10 +1,10 @@
 const config = {
-  providers: [
-    {
-      domain: process.env.CLERK_JWT_ISSUER_DOMAIN,
-      applicationID: "convex",
-    },
-  ],
+    providers: [
+        {
+            domain: "https://ultimate-squirrel-7.clerk.accounts.dev/",
+            applicationID: "convex",
+        },
+    ],
 };
 
 export default config;

@@ -5,13 +5,12 @@ import io
 import os
 from groq import Groq
 import dotenv
-import numpy as np
 import threading
+from groq import Groq
 import base64
 import cv2
 import requests
 import os
-import time
 from openai import OpenAI
 import json
 import uvicorn
@@ -19,6 +18,13 @@ import uvicorn
 dotenv.load_dotenv()
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -158,13 +164,12 @@ def face_detection_loop():
         latest_result = are_eyes_visible(frame)
         # print(f"LOOKING: {latest_result}")
 
-
     cap.release()
 
 
-@app.get("/face-detection")
-async def get_latest_result():
-    return {"res": latest_result}
+@app.route("/face-detection", methods=["GET"])
+def get_latest_result():
+    return JSONResponse(content={"res": latest_result})
 
 
 # starting thread

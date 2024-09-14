@@ -5,6 +5,7 @@ import { QueryCtx, mutation, query } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 import { getUser } from "./users";
 import { CHARACTER_LIMIT } from "./shared";
+export { default as saveTranscription } from "./saveTranscription";
 
 export const all = query({
   args: { paginationOpts: paginationOptsValidator },
@@ -50,6 +51,15 @@ export const get = query({
     return await enrichPost(ctx, post);
   },
 });
+
+export const allLectures = query({
+  handler: async (ctx) => {
+    const lectures = await ctx.db.query("lectures").order("desc").collect();
+    return lectures;
+  },
+});
+
+export type Lecture = Doc<"lectures">;
 
 async function enrichPosts(ctx: QueryCtx, posts: Doc<"posts">[]) {
   return await asyncMap(posts, (post) => enrichPost(ctx, post));
@@ -105,5 +115,20 @@ export const create = mutation({
     // is loaded, we "denormalize" the data and increment
     // a counter - this is safe thanks to Convex's ACID properties!
     await ctx.db.patch(author._id, { numPosts: author.numPosts + 1 });
+  },
+});
+
+export const createLecture = mutation({
+  args: {
+    title: v.string(),
+    transcription: v.string(),
+  },
+  handler: async (ctx, { title, transcription }) => {
+    const lectureId = await ctx.db.insert("lectures", {
+      title,
+      transcription,
+      createdAt: Date.now(),
+    });
+    return lectureId;
   },
 });
