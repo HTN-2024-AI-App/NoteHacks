@@ -56,9 +56,6 @@ curr_summary = ""
 
 @app.post("/api/transcribe")
 async def upload_audio(file: UploadFile = File(...)):
-    global texts
-    global curr_summary
-
     # TODO: segment the audio stuffs
     audio_data = await file.read()
     audio_io = io.BytesIO(audio_data)
