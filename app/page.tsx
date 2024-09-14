@@ -327,13 +327,13 @@ export default function HomePage() {
               </div>
               <div className="flex flex-col space-y-4 w-full">
                 {selectedNote === null ? (
-                  <div className="min-h-[400px] flex-1 p-4 md:min-h-[650px] lg:min-h-[650px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
+                  <div className="min-h-[400px] flex-1 p-4 md:min-h-[680px] lg:min-h-[680px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
                     <ReactMarkdown>
                       {summary || "Your generated, realtime, hand-assisted notes will appear here..."}
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <div className="min-h-[400px] flex-1 p-4 md:min-h-[650px] lg:min-h-[650px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[650px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
+                  <div className="min-h-[400px] flex-1 p-4 md:min-h-[680px] lg:min-h-[680px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[680px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
                     <ReactMarkdown>
                       {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
                     </ReactMarkdown>
