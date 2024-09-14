@@ -439,12 +439,12 @@ export default function HomePage() {
                     <Badge
                       key={item._id}
                       variant={selectedNote === item._id ? "default" : "outline"}
-                      className="flex items-center justify-between !text-sm cursor-pointer"
+                      className="flex flex-col text-center items-center justify-between !text-sm cursor-pointer"
                       onClick={() => setSelectedNote(item._id)}
                     >
-                      <span>
-                        {item.title}&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-                        {new Date(item._creationTime).toLocaleDateString()}
+                      <span className="italic mb-0.5">
+                        {item.title}
+                      </span><span>{new Date(item._creationTime).toLocaleTimeString()}&nbsp;&nbsp;&bull;&nbsp;&nbsp;{new Date(item._creationTime).toLocaleDateString()}
                       </span>
                     </Badge>
                   ))
