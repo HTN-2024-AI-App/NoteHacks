@@ -67,11 +67,16 @@ async def upload_audio(file: UploadFile = File(...)):
     transcription = await transcribe_audio_stream(audio_io)
     texts.append(transcription)
 
-    # if len(texts) > 4:
-        # curr_summary = summarize(curr_summary, texts[-3:])
-    curr_summary = summarize(curr_summary, texts)
+    return JSONResponse(content={"transcription": transcription})
 
-    return JSONResponse(content={"transcription": transcription, "summary": curr_summary})
 
+@app.get("/api/summarize")
+async def summarize():
+    global texts
+    global curr_summary
+
+    curr_summary = summarize(curr_summary, texts[-1:])
+
+    return JSONResponse(content={"summary": curr_summary})
 
 # To run the server, use: uvicorn script_name:app --reload
