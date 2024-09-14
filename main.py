@@ -33,7 +33,12 @@ def summarize(old_summary, text_chunks, conciseness=0):
     else:
         change_consiceness = f"Make this chunk {'less' if conciseness > 0 else 'more'} detailed."
     
-    prev_summary = "Previous summary: " + old_summary if old_summary else ""
+    if old_summary:
+        prev_summary = f"Previous summary: '{old_summary}'."
+    else:
+        prev_summary = ""
+    prev_summary = "Previous summary: " 
+
 
     completion = client.chat.completions.create(
         messages=[
@@ -43,7 +48,7 @@ def summarize(old_summary, text_chunks, conciseness=0):
             },
             {
                 "role": "user",
-                "content": f"{prev_summary}. Please update the summary concisely with the following new text {' '.join(text_chunks)}. {change_consiceness}. Do not tell me that this is the summary, just give the summary.",
+                "content": f"{prev_summary}Please update the summary concisely with the following new text {' '.join(text_chunks)}. {change_consiceness}. Do not tell me that this is the summary, just give the summary.",
             }
         ],
         model="llama3-8b-8192",
