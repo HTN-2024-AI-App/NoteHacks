@@ -139,6 +139,7 @@ More content would go here...`
   const [audioData, setAudioData] = useState<number[]>(new Array(100).fill(100));
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const isLookingHistory = useRef<boolean[]>([]);
 
   useEffect(() => {
     if (cameraStream && videoRef.current) {
@@ -183,12 +184,15 @@ More content would go here...`
           const faceData = await faceResponse.json();
           const isLooking = faceData.res;
 
+          // Update isLooking history
+          isLookingHistory.current = [...isLookingHistory.current.slice(-2), isLooking];
+
           // Gesture recognition
           const gestureResponse = await fetch(`${BACKEND_ROOT_URL}/gesture-recognition`);
           const gestureData = await gestureResponse.json();
 
           // Apply rules
-          if (!isLooking) {
+          if (isLookingHistory.current.length === 3 && isLookingHistory.current.every(val => val === false)) {
             setAlertDialogOpen(true);
             setConcision([0.25]);
           } else if (gestureData.handsPrayer) { // Slow down
