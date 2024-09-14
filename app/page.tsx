@@ -11,7 +11,6 @@ import { TrashIcon, MagnifyingGlassIcon, PersonIcon } from "@radix-ui/react-icon
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Slider } from "@/components/ui/slider";
 
 import { ScreenSpinner } from "@/app/ScreenSpinner";
@@ -286,79 +285,44 @@ export default function HomePage() {
           <div className="grid grid-cols-5">
             <div className={"items-stretch col-span-4 overflow-y-hidden pr-8 flex flex-col gap-x-4 w-full"}>
               {/* title, model, concision, signal support */}
-              <div className="flex flex-row gap-4 items-center mb-4">
+              <div className="flex flex-row gap-4 items-center mb-4 mt-0.5 ml-0.5">
                 <Input type="text" placeholder="CS 3110, Lecture 2" value={title} onChange={(e) => setTitle(e.target.value)} />
 
-                <HoverCard openDelay={200}>
-                  <HoverCardTrigger asChild>
-                    <div className="flex flex-row gap-2 items-center">
-                      <Label htmlFor="maxlength" className="font-semibold w-32">Anti-Distraction</Label>
-                      <Switch
-                        id="maxlength"
-                        checked={distractionMode}
-                        onCheckedChange={setDistractionMode}
-                        className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
-                        aria-label="Concision"
-                      />
-                    </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent
-                    align="start"
-                    className="w-[260px] text-sm"
-                    side="left"
-                  >
-                    Whether we should warn you and lower concision when we detect you looking away from the screen.
-                  </HoverCardContent>
-                </HoverCard>
+                <div className="flex flex-row gap-2 items-center">
+                  <Label htmlFor="distraction-mode" className="font-semibold w-32">Anti-Distraction</Label>
+                  <Switch
+                    id="distraction-mode"
+                    checked={distractionMode}
+                    onCheckedChange={setDistractionMode}
+                    className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+                    aria-label="Distraction Mode"
+                  />
+                </div>
 
-                <HoverCard openDelay={200}>
-                  <HoverCardTrigger asChild>
-                    <div className="flex flex-row gap-2 items-center">
-                      <Label htmlFor="maxlength" className="font-semibold">Concision</Label>
-                      <span className="w-12 rounded-md border border-transparent px-2 py-0.5 text-right text-sm text-muted-foreground hover:border-border">
-                        {concision}
-                      </span>
-                      <Slider
-                        id="maxlength"
-                        max={1}
-                        value={concision}
-                        step={0.01}
-                        onValueChange={setConcision}
-                        className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 w-20"
-                        aria-label="Concision"
-                      />
-                    </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent
-                    align="start"
-                    className="w-[260px] text-sm"
-                    side="left"
-                  >
-                    How concise the notes should be, by default. May be adjusted based on hand signals or distraction.
-                  </HoverCardContent>
-                </HoverCard>
+                <div className="flex flex-row gap-2 items-center">
+                  <Label htmlFor="concision" className="font-semibold">Concision</Label>
+                  <span className="rounded-md border border-transparent px-2 py-0.5 text-right text-sm text-muted-foreground hover:border-border">
+                    {concision}
+                  </span>
+                  <Slider
+                    id="concision"
+                    max={1}
+                    value={concision}
+                    step={0.01}
+                    onValueChange={setConcision}
+                    className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 w-20"
+                    aria-label="Concision"
+                  />
+                </div>
 
-                <div className="!pt-0 !h-0" />
-
-                <HoverCard openDelay={200}>
-                  <HoverCardTrigger asChild>
-                    <div className="flex flex-row flex-nowrap items-center gap-2">
-                      {Object.entries(signalSupport).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between gap-x-2" onClick={() => setSignalSupport(prev => ({ ...prev, [key]: !value }))}>
-                          <Checkbox checked={value} className="accent-black cursor-pointer" id={key} />
-                          <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
-                        </div>
-                      ))}
+                <div className="flex flex-row gap-x-3 flex-nowrap items-center">
+                  {Object.entries(signalSupport).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between gap-x-2" onClick={() => setSignalSupport(prev => ({ ...prev, [key]: !value }))}>
+                      <Checkbox checked={value} className="accent-black cursor-pointer" id={key} />
+                      <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
                     </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent
-                    align="start"
-                    className="w-[260px] text-sm"
-                    side="left"
-                  >
-                    Whether the notes should be generated with signal support, by default. May be adjusted based on hand signals or distraction.
-                  </HoverCardContent>
-                </HoverCard>
+                  ))}
+                </div>
 
               </div>
               <div className="flex flex-col space-y-4 w-full">
