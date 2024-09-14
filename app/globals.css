@@ -259,3 +259,11 @@ ul li img {
         transform: rotate(360deg);
     }
 }
+
+li {
+    @apply !list-disc !p-1;
+}
+
+li {
+    display: list-item !important;
+}
