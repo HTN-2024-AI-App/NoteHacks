@@ -33,12 +33,11 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-// TODO: add modal if distracted.
-
 export default function HomePage() {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const [generatingNotes, setGeneratingNotes] = useState(false);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const BACKEND_ROOT_URL = "http://localhost:8000";
 
   const [concision, setConcision] = useState([0.5]);
   const [title, setTitle] = useState("");
@@ -175,6 +174,41 @@ More content would go here...`
     };
   }, [cameraStream, audioStream]);
 
+  useEffect(() => {
+    if (generatingNotes) {
+      const intervalId = setInterval(async () => {
+        try {
+          // Face detection
+          const faceResponse = await fetch(`${BACKEND_ROOT_URL}/face-detection`);
+          const faceData = await faceResponse.json();
+          const isLooking = faceData.res;
+
+          // Gesture recognition
+          const gestureResponse = await fetch(`${BACKEND_ROOT_URL}/gesture-recognition`);
+          const gestureData = await gestureResponse.json();
+
+          // Apply rules
+          if (!isLooking) {
+            setAlertDialogOpen(true);
+            setConcision([0.25]);
+          } else if (gestureData.handsPrayer) { // Slow down
+            setConcision([0.25]);
+          } else if (gestureData.fist) { // Speed up
+            setConcision([0.75]);
+          } else if (gestureData.stopSign) { // Pause
+            setConcision([1]);
+          } else if (gestureData.thumbsUp) { // Unpause
+            setConcision([0.5]);
+          }
+        } catch (error) {
+          console.error("Error fetching detection data:", error);
+        }
+      }, 1000); // Check every second
+
+      return () => clearInterval(intervalId);
+    }
+  }, [generatingNotes, BACKEND_ROOT_URL]);
+
   const startGeneratingNotes = async () => {
     setGeneratingNotes(true);
     if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
@@ -274,7 +308,7 @@ More content would go here...`
                         <Slider
                           id="maxlength"
                           max={1}
-                          defaultValue={concision}
+                          value={concision}
                           step={0.01}
                           onValueChange={setConcision}
                           className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
@@ -300,7 +334,7 @@ More content would go here...`
                         <div className="flex flex-col gap-y-2 items-start">
                           {Object.entries(signalSupport).map(([key, value]) => (
                             <div key={key} className="flex items-center justify-between gap-x-2 !-my-2">
-                              <Input type="checkbox" className="accent-black cursor-pointer" id={key} onChange={(e) => setSignalSupport({ ...signalSupport, [key]: e.target.checked })} />
+                              <Input type="checkbox" checked={value} className="accent-black cursor-pointer" id={key} onChange={(e) => setSignalSupport({ ...signalSupport, [key]: e.target.checked })} />
                               <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
                             </div>
                           ))}
@@ -377,8 +411,6 @@ More content would go here...`
             </div>
           </div>
           <div className="hidden flex-col space-y-4 sm:flex md:order-2 h-full overflow-y-auto border-l pl-8 border-gray-200 dark:border-gray-800">
-            {/* title, model, concision, signal support */}
-
             <h2 className="font-semibold text-center underline">Past Notes</h2>
             <div className="flex flex-col gap-y-4 items-center justify-between max-h-[700px] overflow-y-auto">
               {history.filter(item => item.title.toLowerCase().includes(search.toLowerCase())).map((item) => (
