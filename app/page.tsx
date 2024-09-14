@@ -196,7 +196,11 @@ export default function HomePage() {
     const interval = setInterval(() => {
       recorder.stop();
       try {
-        recorder.start();
+        if (generatingNotes) {
+          recorder.start();
+        } else {
+          return;
+        }
       } catch (error) {
         console.error("Error starting recording:", error);
       }
@@ -206,6 +210,7 @@ export default function HomePage() {
 
     // Clean up function
     return () => {
+      console.log("Cleaning up audio recording");
       clearInterval(interval);
       recorder.stop();
     };
@@ -236,6 +241,11 @@ export default function HomePage() {
     if (audioStream) {
       audioStream.getTracks().forEach(track => track.stop());
     }
+
+    cameraStream?.getTracks().forEach(function (track) {
+      track.stop();
+    });
+
     setCameraStream(null);
     setAudioStream(null);
     setGeneratingNotes(false);
@@ -250,10 +260,6 @@ export default function HomePage() {
         console.error('Error saving lecture:', error);
       }
     }
-
-    // Reset states
-    setTranscription("");
-    setSummary("");
   };
 
   return isAuthenticated ? (
