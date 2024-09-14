@@ -1,5 +1,6 @@
-"use client";
+'use client';
 
+import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import { SignInButton } from "@clerk/clerk-react";
 import { useConvexAuth } from "convex/react";
 import { useQuery, useMutation } from "convex/react";
@@ -20,7 +21,6 @@ import { models, types } from "./data/models";
 import { ScreenSpinner } from "@/app/ScreenSpinner";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "./ModeToggle";
-import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import { Audiogram } from "@/components/ui/line-chart";
@@ -35,6 +35,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Id } from "@/convex/_generated/dataModel";
+
+import CollapsibleHeading from './components/CollapsibleHeading';
 
 
 export default function HomePage() {
@@ -262,6 +264,25 @@ export default function HomePage() {
     setSummary("");
   };
 
+  const renderSummary = (): ReactNode => {
+    if (!summary) {
+      return "Your generated, realtime, hand-assisted notes will appear here...";
+    }
+
+    const sections = summary.split('\n\n');
+    return sections.map((section, index) => {
+      const [heading, ...contentLines] = section.split('\n');
+      const content = contentLines.join('\n');
+      return (
+        <CollapsibleHeading 
+          key={index} 
+          heading={heading.replace(/^#+\s/, '')} 
+          content={<p>{content}</p>} 
+        />
+      );
+    });
+  };
+
   return isAuthenticated ? (
     <>
       <div className="h-full flex flex-col">
@@ -391,10 +412,8 @@ export default function HomePage() {
             <div className="flex h-full flex-col space-y-4 w-full">
               {selectedNote === null ? (
                 <div className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
-                  <ReactMarkdown>
-                    {summary || "Your generated, realtime, hand-assisted notes will appear here..."}
-                  </ReactMarkdown>
-                </div>
+                {renderSummary()}
+              </div>
               ) : (
                 <div className="min-h-[400px] flex-1 p-4 md:min-h-[700px] lg:min-h-[700px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[700px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
                   <ReactMarkdown>
