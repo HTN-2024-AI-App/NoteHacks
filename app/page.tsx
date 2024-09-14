@@ -191,7 +191,7 @@ export default function HomePage() {
       await sendAudioForTranscription(audioBlob);
     };
 
-    // Record in 5-second intervals
+    // Record in 10-second intervals
     const interval = setInterval(() => {
       recorder.stop();
       try {
@@ -203,7 +203,7 @@ export default function HomePage() {
       } catch (error) {
         console.error("Error starting recording:", error);
       }
-    }, 5000);
+    }, 10000);
 
     recorder.start();
 
