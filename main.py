@@ -181,17 +181,22 @@ def gesture_loop():
     global latest_result_2
     cap = cv2.VideoCapture(0)  # Use default camera
 
-    prompt = """Analyze the image and provide a JSON string with the following information:
-    1. Determine if the person in the image has their hands positioned together in a gesture resembling prayer. This includes recognizing situations where:
-       - The hands may be partially visible, possibly being cut off by the edges of the image.
-       - The hands are joined or touching in a manner that resembles a prayer position, where the palms or fingers are pressed together.
-    2. Identify if there are thumbs up visible in the image.
-    3. Detect if there is a closed fist present in the image.
+    prompt = """Analyze the image and provide a JSON response with the following information:
+
+    1. Determine if the person in the image has their hands positioned together in a gesture resembling prayer. This includes cases where:
+    - The hands are partially visible, possibly cut off by the edges of the image.
+    - The hands are joined or touching in a prayer-like position, with palms or fingers pressed together.
+
+    2. Identify if there is a 'thumbs up' gesture visible in the image.
+
+    3. Detect if a closed fist is present in the image.
+
     4. Recognize if there is a hand gesture resembling a stop sign (palm facing forward with fingers extended).
 
-    Please ensure that your analysis considers various possible orientations and positions of the hands to accurately detect these gestures.
+    The analysis should consider various orientations and positions of the hands to accurately detect these gestures.
 
-    Return the results in the following JSON format:
+    Return the results strictly in the following JSON format:
+
     {
         "handsPrayer": true or false,
         "thumbsUp": true or false,
@@ -199,7 +204,8 @@ def gesture_loop():
         "stopSign": true or false
     }
 
-    Ensure that the JSON string strictly adheres to this format and contains no additional text, escape characters, or deviations from the specified format."""
+    Ensure the JSON string contains no additional text or deviations from this format."""
+
 
     while True:
         ret, frame = cap.read()
