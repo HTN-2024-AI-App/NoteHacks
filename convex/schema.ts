@@ -3,7 +3,6 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
-    // Unique identifier from the auth provider
     tokenIdentifier: v.string(),
     name: v.string(),
     username: v.string(),
@@ -12,8 +11,15 @@ export default defineSchema({
   })
     .index("tokenIdentifier", ["tokenIdentifier"])
     .index("username", ["username"]),
+    
   posts: defineTable({
     authorId: v.id("users"),
     text: v.string(),
   }).index("authorId", ["authorId"]),
+
+  lectures: defineTable({
+    title: v.string(),
+    transcription: v.string(), // Markdown transcription
+    createdAt: v.date(),
+  }).index("title", ["title"]),
 });
