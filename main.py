@@ -64,7 +64,7 @@ def summarize(old_summary, text_chunks, conciseness_delta=0):
         messages=[
             {
                 "role": "system",
-                "content": "You are given a text to summarize. If the input text already contains a previous summary, it will be marked with 'Previous summary: [old_summary]'. Your task is to append the new summary to the existing summary, maintaining any existing titles or headings. You may modify the existing summary to incorporate new relevant information, but do not remove or omit the original summary. The new summary should longer than the previous one. Use titles and headings as necessary to organize the content effectively."
+                "content": "You are given a text to summarize. If the input text already contains a previous summary, it will be marked with 'Previous summary: [old_summary]'. Your task is to append the new summary to the existing summary, maintaining any existing titles or headings. You may modify the existing summary to incorporate new relevant information, but do not remove or omit the original summary. The new summary should longer than the previous one. Use titles and headings as necessary to organize the content effectively. Rember to make it concise, only important information should be included.",
             },
             {
                 "role": "user",
@@ -185,7 +185,9 @@ def encode_image(image_array):
     return base64.b64encode(buffer).decode("utf-8")
 
 
-def capture_and_query_chatgpt(prompt, image_base64, model="gpt-4o-mini", max_tokens=300):
+def capture_and_query_chatgpt(
+    prompt, image_base64, model="gpt-4o-mini", max_tokens=300
+):
     # Initialize the OpenAI client
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
