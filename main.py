@@ -6,10 +6,8 @@ import os
 from groq import Groq
 import dotenv
 import threading
-from groq import Groq
 import base64
 import cv2
-import requests
 import os
 from openai import OpenAI
 import json
@@ -24,15 +22,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
 )
 
 # --- audio_transcription.py ---
@@ -162,12 +151,12 @@ def face_detection_loop():
             break
 
         latest_result = are_eyes_visible(frame)
-        # print(f"LOOKING: {latest_result}")
+        print(f"LOOKING: {latest_result}")
 
     cap.release()
 
 
-@app.route("/face-detection", methods=["GET"])
+@app.get("/face-detection")
 def get_latest_result():
     return JSONResponse(content={"res": latest_result})
 
@@ -178,6 +167,7 @@ camera_thread.daemon = (
     True  # Set as a daemon thread so it will close when the main program exits
 )
 camera_thread.start()
+print("STARTED")
 # ----- End of facedetection.py -----
 
 
@@ -286,7 +276,7 @@ def gesture_loop():
         "stopSign": true or false
     }
 
-    Ensure the JSON string contains no additional text or deviations from this format."""
+    Ensure the JSON string contains no additional text or deviations from this format. Also don't include backticks."""
 
     while True:
         ret, frame = cap.read()

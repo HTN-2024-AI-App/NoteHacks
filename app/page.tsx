@@ -76,71 +76,6 @@ export default function HomePage() {
   const isLookingHistory = useRef<boolean[]>([]);
 
 
-  useEffect(() => {
-    if (generatingNotes) {
-      startAudioRecording();
-    } else {
-      stopAudioRecording();
-    }
-  }, [generatingNotes]);
-
-  const startAudioRecording = async () => {
-    if (audioStream) {
-      const recorder = new MediaRecorder(audioStream);
-      setAudioRecorder(recorder);
-
-      recorder.ondataavailable = (event) => {
-        audioChunks.current.push(event.data);
-      };
-
-      recorder.start();
-
-      // Set up interval to send audio every 10 seconds
-      const intervalId = setInterval(sendAudioToBackend, 5000);
-
-      // Store the interval ID to clear it later
-      return () => clearInterval(intervalId);
-    }
-  };
-
-  const stopAudioRecording = () => {
-    if (audioRecorder) {
-      audioRecorder.stop();
-    }
-  };
-
-  const sendAudioToBackend = async () => {
-    if (audioChunks.current.length > 0) {
-      const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
-
-      console.log('Sending audio to backend...');
-      try {
-        const response = await fetch(`http://localhost:8000/api/transcribe`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          updateNoteContent(data.transcription);
-        } else {
-          console.error('Failed to process audio');
-        }
-      } catch (error) {
-        console.error('Error sending audio to backend:', error);
-      }
-
-      // Clear the audio chunks after sending
-      audioChunks.current = [];
-    }
-  };
-
-  const updateNoteContent = (newContent: string) => {
-    setNoteContent((prevContent) => prevContent + '\n' + newContent);
-  };
-
   const [transcription, setTranscription] = useState("");
   const [summary, setSummary] = useState("");
   const createLecture = useMutation(api.posts.createLecture);
@@ -178,6 +113,15 @@ export default function HomePage() {
       }
     };
   }, [cameraStream, audioStream]);
+
+  const slowlySetConcision = async (newConcision: number[]) => {
+    const step = (newConcision[0] - concision[0]) / 10; // Divide the change into 10 steps
+    for (let i = 0; i < 10; i++) {
+      setConcision(prev => [Math.min(Math.max(prev[0] + step, 0), 1)]); // Ensure concision stays between 0 and 1
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 50ms delay between steps
+    }
+    setConcision(newConcision); // Ensure we end up at the exact new concision value
+  };
 
   useEffect(() => {
     if (generatingNotes) {
@@ -239,7 +183,7 @@ export default function HomePage() {
       console.error("Media devices and getUserMedia are not supported.");
     }
   };
-  
+
 
   const processAudio = async (stream: MediaStream) => {
     const recorder = new MediaRecorder(stream);
@@ -380,7 +324,7 @@ export default function HomePage() {
                           max={1}
                           value={concision}
                           step={0.01}
-                          onValueChange={setConcision}
+                          onValueChange={slowlySetConcision}
                           className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
                           aria-label="Concision"
                         />
