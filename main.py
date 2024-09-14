@@ -64,7 +64,7 @@ def summarize(old_summary, text_chunks, conciseness_delta=0):
         messages=[
             {
                 "role": "system",
-                "content": f"You summarize texts succinctly and returns the summary in markdown.",
+                "content": "You are given a text to summarize. If the input text already contains a previous summary, it will be marked with 'Previous summary: [old_summary]'. Your task is to append the new summary to the existing summary, maintaining any existing titles or headings. You may modify the existing summary to incorporate new relevant information, but do not remove or omit the original summary. The new summary should longer than the previous one. Use titles and headings as necessary to organize the content effectively."
             },
             {
                 "role": "user",
