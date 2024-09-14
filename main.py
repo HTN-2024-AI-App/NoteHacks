@@ -3,11 +3,15 @@ from fastapi.responses import JSONResponse
 import io
 import os
 from groq import Groq
+import dotenv
+
+dotenv.load_dotenv()
 
 app = FastAPI()
 
 # Initialize Groq client
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
+
 
 async def transcribe_audio_stream(audio_chunk):
     try:
@@ -15,12 +19,13 @@ async def transcribe_audio_stream(audio_chunk):
             file=audio_chunk,
             model="distil-whisper-large-v3-en",
             response_format="text",
-            language="en"
+            language="en",
         )
         return transcription
     except Exception as e:
         print(f"Error in transcription: {e}")
         return ""
+
 
 @app.post("/api/transcribe")
 async def upload_audio(file: UploadFile = File(...)):
@@ -30,5 +35,6 @@ async def upload_audio(file: UploadFile = File(...)):
 
     transcription = await transcribe_audio_stream(audio_io)
     return JSONResponse(content={"transcription": transcription})
+
 
 # To run the server, use: uvicorn script_name:app --reload
