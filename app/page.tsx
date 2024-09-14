@@ -24,6 +24,7 @@ import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import { Audiogram } from "@/components/ui/line-chart";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,15 +37,17 @@ import {
 import { Id } from "@/convex/_generated/dataModel";
 
 
-// TODO: add modal if distracted.
-
 export default function HomePage() {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const [generatingNotes, setGeneratingNotes] = useState(false);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const BACKEND_ROOT_URL = "http://localhost:8000";
 
   const [concision, setConcision] = useState([0.5]);
   const [title, setTitle] = useState("");
+  const [audioRecorder, setAudioRecorder] = useState<MediaRecorder | null>(null);
+  const [noteContent, setNoteContent] = useState('');
+  const audioChunks = useRef<Blob[]>([]);
 
   const [signalSupport, setSignalSupport] = useState({
     "Slow down": true,
@@ -70,6 +73,73 @@ export default function HomePage() {
   const [audioData, setAudioData] = useState<number[]>(new Array(100).fill(100));
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const isLookingHistory = useRef<boolean[]>([]);
+
+
+  useEffect(() => {
+    if (generatingNotes) {
+      startAudioRecording();
+    } else {
+      stopAudioRecording();
+    }
+  }, [generatingNotes]);
+
+  const startAudioRecording = async () => {
+    if (audioStream) {
+      const recorder = new MediaRecorder(audioStream);
+      setAudioRecorder(recorder);
+
+      recorder.ondataavailable = (event) => {
+        audioChunks.current.push(event.data);
+      };
+
+      recorder.start();
+
+      // Set up interval to send audio every 10 seconds
+      const intervalId = setInterval(sendAudioToBackend, 5000);
+
+      // Store the interval ID to clear it later
+      return () => clearInterval(intervalId);
+    }
+  };
+
+  const stopAudioRecording = () => {
+    if (audioRecorder) {
+      audioRecorder.stop();
+    }
+  };
+
+  const sendAudioToBackend = async () => {
+    if (audioChunks.current.length > 0) {
+      const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+
+      console.log('Sending audio to backend...');
+      try {
+        const response = await fetch(`http://localhost:8000/api/transcribe`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          updateNoteContent(data.transcription);
+        } else {
+          console.error('Failed to process audio');
+        }
+      } catch (error) {
+        console.error('Error sending audio to backend:', error);
+      }
+
+      // Clear the audio chunks after sending
+      audioChunks.current = [];
+    }
+  };
+
+  const updateNoteContent = (newContent: string) => {
+    setNoteContent((prevContent) => prevContent + '\n' + newContent);
+  };
 
   const [transcription, setTranscription] = useState("");
   const [summary, setSummary] = useState("");
@@ -109,6 +179,44 @@ export default function HomePage() {
     };
   }, [cameraStream, audioStream]);
 
+  useEffect(() => {
+    if (generatingNotes) {
+      const intervalId = setInterval(async () => {
+        try {
+          // Face detection
+          const faceResponse = await fetch(`${BACKEND_ROOT_URL}/face-detection`);
+          const faceData = await faceResponse.json();
+          const isLooking = faceData.res;
+
+          // Update isLooking history
+          isLookingHistory.current = [...isLookingHistory.current.slice(-2), isLooking];
+
+          // Gesture recognition
+          const gestureResponse = await fetch(`${BACKEND_ROOT_URL}/gesture-recognition`);
+          const gestureData = await gestureResponse.json();
+
+          // Apply rules
+          if (isLookingHistory.current.length === 3 && isLookingHistory.current.every(val => val === false)) {
+            setAlertDialogOpen(true);
+            setConcision([0.25]);
+          } else if (gestureData.handsPrayer) { // Slow down
+            setConcision([0.25]);
+          } else if (gestureData.fist) { // Speed up
+            setConcision([0.75]);
+          } else if (gestureData.stopSign) { // Pause
+            setConcision([1]);
+          } else if (gestureData.thumbsUp) { // Unpause
+            setConcision([0.5]);
+          }
+        } catch (error) {
+          console.error("Error fetching detection data:", error);
+        }
+      }, 1000); // Check every second
+
+      return () => clearInterval(intervalId);
+    }
+  }, [generatingNotes, BACKEND_ROOT_URL]);
+
   const startGeneratingNotes = async () => {
     setGeneratingNotes(true);
     if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
@@ -131,6 +239,7 @@ export default function HomePage() {
       console.error("Media devices and getUserMedia are not supported.");
     }
   };
+  
 
   const processAudio = async (stream: MediaStream) => {
     const recorder = new MediaRecorder(stream);
@@ -269,7 +378,7 @@ export default function HomePage() {
                         <Slider
                           id="maxlength"
                           max={1}
-                          defaultValue={concision}
+                          value={concision}
                           step={0.01}
                           onValueChange={setConcision}
                           className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"

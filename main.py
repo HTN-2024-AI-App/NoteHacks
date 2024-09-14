@@ -9,7 +9,7 @@ import threading
 from groq import Groq
 import base64
 import cv2
-import base64
+import requests
 import os
 from openai import OpenAI
 import json
@@ -24,6 +24,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
 )
 
 # --- audio_transcription.py ---
@@ -46,25 +55,27 @@ async def transcribe_audio_stream(audio_chunk):
         return ""
 
 
-def summarize(old_summary, text_chunks, conciseness=0):
-    if conciseness == 0:
+def summarize(old_summary, text_chunks, conciseness_delta=0):
+    conciseness_delta = int(conciseness_delta)
+    if conciseness_delta == 0:
         change_consiceness = ""
     else:
-        change_consiceness = (
-            f"Make this chunk {'less' if conciseness > 0 else 'more'} detailed."
-        )
+        if conciseness_delta < 0:
+            delta = "more"
+        elif conciseness_delta > 0:
+            delta = "less"
+        change_consiceness = f"Make this new text passage {delta} detailed."
 
     if old_summary:
         prev_summary = f"Previous summary: '{old_summary}'."
     else:
         prev_summary = ""
-    prev_summary = "Previous summary: "
 
     completion = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": f"You are a summarizer who summarizes texts succinctly.",
+                "content": f"You summarize texts succinctly and returns the summary in markdown.",
             },
             {
                 "role": "user",
@@ -94,7 +105,7 @@ async def upload_audio(file: UploadFile = File(...)):
     transcription = await transcribe_audio_stream(audio_io)
     texts.append(transcription)
 
-    print(transcription, " has been gotten")
+    print(texts)
 
     return JSONResponse(content={"transcription": transcription})
 
@@ -103,7 +114,8 @@ async def upload_audio(file: UploadFile = File(...)):
 
 
 @app.get("/api/summarize")
-async def summarize_audio():
+async def summarize_audio(conciseness_delta=0):
+    # e.g.: /api/summarize?conciseness_delta=0
     global texts
     global curr_summary
     global last_seen
@@ -111,7 +123,7 @@ async def summarize_audio():
     if len(texts) == 0:
         return JSONResponse(content={"summary": "No transcriptions available"})
 
-    curr_summary = summarize(curr_summary, texts[last_seen:])
+    curr_summary = summarize(curr_summary, texts[last_seen:], conciseness_delta)
     last_seen = len(texts)
 
     return JSONResponse(content={"summary": curr_summary})
@@ -169,7 +181,12 @@ camera_thread.start()
 # ----- End of facedetection.py -----
 
 
-latest_result_2 = False
+latest_result_2 = {
+    "handsPrayer": False,
+    "thumbsUp": False,
+    "fist": False,
+    "stopSign": False,
+}
 
 
 # Function to encode the image
@@ -178,9 +195,9 @@ def encode_image(image_array):
     return base64.b64encode(buffer).decode("utf-8")
 
 
-def capture_and_query_chatgpt(prompt, image_base64, model="gpt-4o", max_tokens=300):
+def capture_and_query_chatgpt(prompt, image_base64, model="gpt-4o-mini", max_tokens=300):
     # Initialize the OpenAI client
-    client = OpenAI()
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
     # Prepare the messages for the API request
     messages = [
@@ -276,21 +293,30 @@ def gesture_loop():
         if not ret:
             break
 
-        # Show the image in a window
-        # cv2.imshow('Camera Feed', frame)
-
-        # Capture and query Groq
+        # Capture and query ChatGPT
         base64_image = encode_image(frame)
-        latest_result_2 = capture_and_query_chatgpt(prompt, base64_image)
-        # print("PRAYING", latest_result_2)
+        result = capture_and_query_chatgpt(prompt, base64_image)
+
+        try:
+            latest_result_2 = json.loads(result)
+        except json.JSONDecodeError:
+            print(f"Error parsing JSON: {result}")
+            latest_result_2 = {
+                "handsPrayer": False,
+                "thumbsUp": False,
+                "fist": False,
+                "stopSign": False,
+            }
+
+        # print("GESTURES", latest_result_2)
 
     cap.release()
     cv2.destroyAllWindows()
 
 
-@app.route("/gesture-recognition", methods=["GET"])
-def get_latest_result_2():
-    return JSONResponse(content={"res": latest_result_2})
+@app.get("/gesture-recognition")
+async def get_latest_result_2():
+    return latest_result_2  # Now returns the JSON object directly
 
 
 # starting thread
@@ -303,6 +329,3 @@ camera_thread.start()
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 # To run the server, use: uvicorn main:app --reload
-
-# import uvicorn
-# uvicorn.run(app, host="0.0.0.0", port=8080)
