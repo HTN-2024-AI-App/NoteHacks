@@ -412,6 +412,8 @@ export default function HomePage() {
                     {renderSummary()}
                   </div>
                 ) : (
+
+                  // TODO: CHAT BOX that is currently integrated with the notes lol
                   <div className="min-h-[400px] flex-1 p-4 md:min-h-[640px] lg:min-h-[640px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[640px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
                     <ReactMarkdown>
                       {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
