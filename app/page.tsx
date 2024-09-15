@@ -352,10 +352,9 @@ export default function HomePage() {
     });
   };
 
-  const submitQuestion = async (event : React.FormEvent<HTMLFormElement>) => {
+  const submitQuestion = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log(question);
-    let context = lectures?.find(item => item._id === selectedNote)?.transcription || ''
+    let context = lectures?.find(item => item._id === selectedNote)?.transcription || '';
 
     try {
       const response = await fetch('http://localhost:8000/api/ask', {
@@ -369,6 +368,9 @@ export default function HomePage() {
       const answer = await response.json();
       setQuestionHistory([...questionHistory, question, answer.response]);
       setQuestion("");
+
+      console.log(answer);
+      console.log(questionHistory);
 
       return answer;
     } catch (error) {
@@ -434,74 +436,82 @@ export default function HomePage() {
                   />
                 </div>
 
-              <div className="flex flex-row gap-x-3 flex-nowrap items-start">
-            {Object.entries(signalSupport).map(([key, value]) => (
-              <div key={key} className="flex flex-col items-center justify-between gap-y-2">
-                <div className="flex items-center justify-between gap-x-2" >
-                  <Checkbox checked={value} className="accent-black cursor-pointer" id={key} onClick={() => setSignalSupport(prev => ({ ...prev, [key]: !value }))} />
-                  {/* <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label> */}
-                    <Button 
-                      onClick={() => handleActionButton(key)}
-                      className="w-full flex items-center justify-center flex-nowrap text-nowrap"
-                      variant="outline"
-                      size="sm"
-                      >
-                      {key} {nameEmojiMap[key]}
-                    </Button>
-                  </div>
-              </div>
-            ))}
-          </div>
-
-              </div>
-              <div className="flex flex-col space-y-4 w-full">
-                {selectedNote === null ? (
-                  <div className="min-h-[400px] flex-1 p-4 md:min-h-[640px] lg:min-h-[640px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
-                    {renderSummary()}
-                  </div>
-                ) : (
-
-                  // TODO: CHAT BOX that is currently integrated with the notes lol
-                  <div className="min-h-[400px] flex-1 p-4 md:min-h-[640px] lg:min-h-[640px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[640px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
-                    <ReactMarkdown>
-                      {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
-                    </ReactMarkdown>
-                    {questionHistory.map((item, index) => {
-                      return (
-                        <div key={index}>
-                          <p className="font-bold">{index % 2 == 1 ? '[System]' : '[You]'}{' '}<p className="font-normal"><ReactMarkdown>{item}</ReactMarkdown></p></p>
-                        </div>
-                      );
-                    })}
-                    <div className="relative align-baseline">
-                      <QuestionMarkIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 size-6" />
-                      <form onSubmit={submitQuestion}>
-                        <Input type="text" placeholder="Got a question?" className="!pl-10 min-w-[20rem] bg-white" value={question} onChange={(e) => setQuestion(e.target.value)} />
-                      </form>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  {selectedNote === null ? (
-                    generatingNotes ? (
-                      <Button onClick={() => stopRecording(true)}>Save recording</Button>
-                    ) : (
-                      <Button onClick={startGeneratingNotes}>Start recording</Button>
-                    )
-                  ) : (
-                    <Button variant="outline" onClick={() => setSelectedNote(null)}>Back to new note</Button>
-                  )}
-                  {!selectedNote && generatingNotes && <>
-                    <Button variant="destructive" onClick={() => stopRecording(false)}>
-                      <span className="sr-only">Cancel generation</span>
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
-                    {audioStream && (
-                      <div className="w-full">
-                        <Audiogram data={audioData} width={850} height={40} />
+                <div className="flex flex-row gap-x-3 flex-nowrap items-start">
+                  {Object.entries(signalSupport).map(([key, value]) => (
+                    <div key={key} className="flex flex-col items-center justify-between gap-y-2">
+                      <div className="flex items-center justify-between gap-x-2" >
+                        <Checkbox checked={value} className="accent-black cursor-pointer" id={key} onClick={() => setSignalSupport(prev => ({ ...prev, [key]: !value }))} />
+                        {/* <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label> */}
+                        <Button
+                          onClick={() => handleActionButton(key)}
+                          className="w-full flex items-center justify-center flex-nowrap text-nowrap"
+                          variant="outline"
+                          size="sm"
+                        >
+                          {key} {nameEmojiMap[key]}
+                        </Button>
                       </div>
-                    )}</>}
+                    </div>
+                  ))}
                 </div>
+
+              </div>
+              <div className="flex flex-row gap-x-4">
+                <div className="flex flex-col space-y-4 w-full">
+                  {selectedNote === null ? (
+                    <div className="min-h-[400px] flex-1 p-4 md:min-h-[640px] lg:min-h-[640px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
+                      {renderSummary()}
+                    </div>
+                  ) : (
+
+                    // TODO: CHAT BOX that is currently integrated with the notes lol
+                    <div className="min-h-[400px] flex-1 p-4 md:min-h-[640px] lg:min-h-[640px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[640px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
+                      <ReactMarkdown>
+                        {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    {selectedNote === null ? (
+                      generatingNotes ? (
+                        <Button onClick={() => stopRecording(true)}>Save recording</Button>
+                      ) : (
+                        <Button onClick={startGeneratingNotes}>Start recording</Button>
+                      )
+                    ) : (
+                      <Button variant="outline" onClick={() => setSelectedNote(null)}>Back to new note</Button>
+                    )}
+                    {!selectedNote && generatingNotes && <>
+                      <Button variant="destructive" onClick={() => stopRecording(false)}>
+                        <span className="sr-only">Cancel generation</span>
+                        <TrashIcon className="h-4 w-4" />
+                      </Button>
+                      {audioStream && (
+                        <div className="w-full">
+                          <Audiogram data={audioData} width={850} height={40} />
+                        </div>
+                      )}</>}
+                  </div>
+                </div>
+                {selectedNote && <div className="w-[500px] rounded-md border border-gray-300 dark:border-gray-700 p-4 max-h-[640px] overflow-y-auto"> <div className="flex flex-col gap-y-2">
+                  {questionHistory.map((item, index) => {
+                    return (
+                      <div key={index}>
+                        <ReactMarkdown>{
+                          index % 2 == 1 ? '**[System]:** ' + item : '**[You]:** ' +
+                            item}</ReactMarkdown>
+                      </div>
+                    );
+                  })}
+                  <div className={"relative align-baseline" + (questionHistory.length > 0 ? " mt-4" : "")}>
+                    <QuestionMarkIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 size-6" />
+                    <form onSubmit={submitQuestion}>
+                      <Input type="text" placeholder="Got a question?" className="!pl-10 bg-white dark:bg-gray-600" value={question} onChange={(e) => setQuestion(e.target.value)} />
+                    </form>
+                  </div>
+                </div>
+                </div>
+                }
               </div>
             </div>
             <div className="hidden flex-col space-y-4 sm:flex md:order-2 h-full overflow-y-auto border-l pl-8 border-gray-200 dark:border-gray-800">
