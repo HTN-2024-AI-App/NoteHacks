@@ -197,7 +197,7 @@ export default function HomePage() {
       await sendAudioForTranscription(audioBlob);
     };
 
-    // Record in 10-second intervals
+    // Record in 5-second intervals
     const interval = setInterval(() => {
       recorder.stop();
       try {
