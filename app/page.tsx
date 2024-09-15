@@ -218,10 +218,6 @@ export default function HomePage() {
   };
 
   const sendAudioForTranscription = async (audioBlob: Blob) => {
-    if (!generatingNotes) {
-      return;
-    }
-
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio.wav');
 
