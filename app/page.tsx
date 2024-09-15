@@ -16,7 +16,7 @@ import { Slider } from "@/components/ui/slider";
 import { ScreenSpinner } from "@/app/ScreenSpinner";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "./ModeToggle";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import { Audiogram } from "@/components/ui/line-chart";
@@ -25,6 +25,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import CollapsibleHeading from "./components/CollapsibleHeading";
 
 export default function HomePage() {
   const { isLoading, isAuthenticated } = useConvexAuth();
@@ -34,6 +35,15 @@ export default function HomePage() {
   const [concision, setConcision] = useState([0.5]);
   const [distractionMode, setDistractionMode] = useState(false);
   const [title, setTitle] = useState("");
+
+  // use effect distraction mode localStorage setItem
+  useEffect(() => {
+    if (distractionMode) {
+      localStorage.setItem("distractionMode", "true");
+    } else {
+      localStorage.setItem("distractionMode", "false");
+    }
+  }, [distractionMode]);
 
   const [signalSupport, setSignalSupport] = useState({
     "Slow down": true,
@@ -102,23 +112,14 @@ export default function HomePage() {
     };
   }, [cameraStream, audioStream]);
 
-  const slowlySetConcision = async (newConcision: number[]) => {
-    const step = (newConcision[0] - concision[0]) / 10; // Divide the change into 10 steps
-    for (let i = 0; i < 10; i++) {
-      setConcision(prev => [Math.min(Math.max(prev[0] + step, 0), 1)]); // Ensure concision stays between 0 and 1
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 50ms delay between steps
-    }
-    setConcision(newConcision); // Ensure we end up at the exact new concision value
-  };
-
   useEffect(() => {
     if (generatingNotes) {
       const intervalId = setInterval(async () => {
         try {
           let isLooking = true;
 
-          // Face detection
-          if (distractionMode) {
+          // Face detection. Must be set once before running.
+          if (distractionMode || localStorage.getItem("distractionMode") === "true") {
             const faceResponse = await fetch(`${BACKEND_ROOT_URL}/face-detection`);
             isLooking = (await faceResponse.json()).res;
             // Update isLooking history
@@ -128,13 +129,18 @@ export default function HomePage() {
           // Gesture recognition
           const gestureResponse = await fetch(`${BACKEND_ROOT_URL}/gesture-recognition`);
           const gestureData = await gestureResponse.json();
+          const lastShowedToast = localStorage.getItem("lastShowedToast");
+          const lastShowedToastTime = lastShowedToast ? new Date(parseInt(lastShowedToast)).getTime() : 0;
 
           // Apply rules
           if (isLookingHistory.current.length === 3 && isLookingHistory.current.every(val => val === false)) {
-            toast({
-              title: "Detected distraction",
-              description: "We've detected that you're looking away from the screen. We've lowered concision to make the notes more understandable.",
-            });
+            if (Date.now() - lastShowedToastTime > 10000) {
+              toast({
+                title: "Detected distraction",
+                description: "We've detected that you're looking away from the screen. We've lowered concision to make the notes more understandable.",
+              });
+              localStorage.setItem("lastShowedToast", Date.now().toString());
+            }
             setConcision([0.25]);
           } else if (gestureData.handsPrayer) { // Slow down
             setConcision([0.25]);
@@ -195,15 +201,11 @@ export default function HomePage() {
     const interval = setInterval(() => {
       recorder.stop();
       try {
-        if (generatingNotes) {
-          recorder.start();
-        } else {
-          return;
-        }
+        recorder.start();
       } catch (error) {
         console.error("Error starting recording:", error);
       }
-    }, 5000);
+    }, 10_000);
 
     recorder.start();
 
@@ -260,6 +262,34 @@ export default function HomePage() {
       }
     }
   };
+
+  const renderSummary = (): ReactNode => {
+    if (!summary) {
+      return "Your generated, realtime, hand-assisted notes will appear here...";
+    }
+
+    // Split sections and filter out empty lines
+
+    const sections = summary.split('#').filter(section => section.trim() !== '' || section !== "#");
+
+    return sections.map((section, index) => {
+      // Split each section into heading and content, filtering out empty content lines
+      if (section.trim() === '' || section.length <= 1) return null;
+      const [heading, ...contentLines] = section.split('\n').filter(line => line.trim() !== '');
+      const content = contentLines.join(' '); // Join content lines into a single paragraph
+
+      if (content.trim() === '') return null;
+
+      return (
+        <CollapsibleHeading
+          key={index}
+          heading={heading}
+          content={<p>{content}</p>}
+        />
+      );
+    });
+  };
+
 
   return isAuthenticated ? (
     <>
@@ -328,9 +358,7 @@ export default function HomePage() {
               <div className="flex flex-col space-y-4 w-full">
                 {selectedNote === null ? (
                   <div className="min-h-[400px] flex-1 p-4 md:min-h-[680px] lg:min-h-[680px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert !max-w-full overflow-y-auto">
-                    <ReactMarkdown>
-                      {summary || "Your generated, realtime, hand-assisted notes will appear here..."}
-                    </ReactMarkdown>
+                    {renderSummary()}
                   </div>
                 ) : (
                   <div className="min-h-[400px] flex-1 p-4 md:min-h-[680px] lg:min-h-[680px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[680px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
