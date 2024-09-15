@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useRef, useEffect, ReactNode } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { ChevronRightIcon, ChevronDownIcon } from '@radix-ui/react-icons';
 
 interface CollapsibleHeadingProps {

@@ -45,6 +45,13 @@ export default function HomePage() {
     }
   }, [distractionMode]);
 
+  // similar for concision
+  useEffect(() => {
+    if (concision) {
+      localStorage.setItem("concision", concision[0].toString());
+    }
+  }, [concision, setConcision]);
+
   const [signalSupport, setSignalSupport] = useState({
     "Slow down": true,
     "Speed up": true,
@@ -222,17 +229,19 @@ export default function HomePage() {
     formData.append('file', audioBlob, 'audio.wav');
 
     try {
-      const response = await fetch('http://localhost:8000/api/transcribe', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await response.json();
-      setTranscription(prev => prev + ' ' + data.transcription);
+      if (localStorage.getItem("concision") && parseFloat(localStorage.getItem("concision")!) < 1) {
+        const response = await fetch('http://localhost:8000/api/transcribe', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        setTranscription(prev => prev + ' ' + data.transcription);
 
-      // Get summary
-      const summaryResponse = await fetch('http://localhost:8000/api/summarize');
-      const summaryData = await summaryResponse.json();
-      setSummary(summaryData.summary);
+        // Get summary
+        const summaryResponse = await fetch('http://localhost:8000/api/summarize');
+        const summaryData = await summaryResponse.json();
+        setSummary(summaryData.summary);
+      }
     } catch (error) {
       console.error('Error sending audio for transcription:', error);
     }
