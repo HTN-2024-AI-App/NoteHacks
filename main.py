@@ -12,6 +12,7 @@ import os
 from openai import OpenAI
 import json
 import uvicorn
+from typing import List
 
 dotenv.load_dotenv()
 
@@ -44,37 +45,61 @@ async def transcribe_audio_stream(audio_chunk):
         return ""
 
 
-def summarize(old_summary, text_chunks, conciseness_delta=0):
+def summarize(old_summary: str, text_chunks: List[str], conciseness_delta: int = 0) -> str:
     conciseness_delta = int(conciseness_delta)
     if conciseness_delta == 0:
-        change_consiceness = ""
+        change_conciseness = ""
     else:
-        if conciseness_delta < 0:
-            delta = "more"
-        elif conciseness_delta > 0:
-            delta = "less"
-        change_consiceness = f"Make this new text passage {delta} detailed."
+        delta = "more" if conciseness_delta < 0 else "less"
+        change_conciseness = f"Make this new text passage {delta} detailed."
 
-    if old_summary:
-        prev_summary = f"Previous summary: '{old_summary}'."
-    else:
-        prev_summary = ""
+    prev_summary = f"<previous_key_sentences> '{old_summary}' </previous_key_sentences>"
 
     completion = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": "You are given a text to summarize. If the input text already contains a previous summary, it will be marked with 'Previous summary: [old_summary]'. Your task is to append the new summary to the existing summary, maintaining any existing titles or headings. You may modify the existing summary to incorporate new relevant information, but do not remove or omit the original summary. The new summary should longer than the previous one. Use titles and headings as necessary to organize the content effectively. Rember to make it concise, only important information should be included.",
+                "content": """
+                    You will be given a text to summarize. Follow these steps:
+
+                    1. At the beginning of the user input, you'll find a list of previously summarized points enclosed in <previous_key_sentences> tags. Copy this content exactly as it appears, without the tags, at the beginning of your response.
+
+                    2. Read the new text provided after the previous summary and create a new summary point:
+                    a. Write an informative heading that clearly indicates the main topic or key idea of the following paragraph.
+                    b. Write a concise paragraph summarizing the main points of the new text.
+
+                    3. If the new text is closely related to the immediately preceding point, instead of adding a new heading and paragraph, modify the existing one to incorporate the new information.
+
+                    4. Format the entire summary as a Markdown document:
+                    - Use only H2 (##) for headings. No other heading levels are allowed.
+                    - Use regular text for paragraphs. Each heading should be followed by a paragraph.
+                    - Always follow a heading with a paragraph
+                    - Separate each heading and paragraph with a blank line
+
+                    5. Ensure each heading is detailed and informative, providing a clear idea of the paragraph's content without needing to read it.
+
+                    6. Keep each paragraph concise and focused on the main points of the text.
+
+                    7. Your response should contain only:
+                    a. The previous key sentences (without tags)
+                    b. The new or updated summary point
+                    Both formatted in Markdown as described above. Do not include any additional explanations or comments.""",
             },
             {
                 "role": "user",
-                "content": f"{prev_summary}Please update the summary concisely with the following new text {' '.join(text_chunks)}. {change_consiceness}. Do not tell me that this is the summary, just give the summary.",
+                "content": f"""{prev_summary}\n
+                            text: {' '.join(text_chunks)}.\n
+                            {change_conciseness}""",
             },
         ],
         model="llama3-8b-8192",
     )
 
+
     content = completion.choices[0].message.content
+
+    content = content.replace("<previous_key_sentences>", "").replace("</previous_key_sentences>", "").strip()
+    print("CONTENT", content)
 
     return content
 
