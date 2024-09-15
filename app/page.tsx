@@ -42,6 +42,8 @@ export default function HomePage() {
   const [selectedNote, setSelectedNote] = useState<Id<"lectures"> | null>(null);
 
   const [search, setSearch] = useState("");
+  const [question, setQuestion] = useState("");
+  const [questionHistory, setQuestionHistory] = useState<string[]>([]);
 
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
