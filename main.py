@@ -13,6 +13,8 @@ from openai import OpenAI
 import json
 import uvicorn
 from typing import List
+import cohere
+co = cohere.Client('')
 
 dotenv.load_dotenv()
 
@@ -24,6 +26,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- cohere.py ---
+
+def generate_code_snippets(text):
+    response = co.generate(
+        model='command-nightly',
+        prompt=f"Based on the following lecture content, generate relevant code snippets that will help reader understand the content in explained in the lecture content as given:\n{text}. If possible, provide code snippets in Python. ONLY OUTPUT THE CODE in markdown formating. If not possible to provide code snippets, return ' '.",
+        max_tokens=500,
+        temperature=0.7
+    )
+    return response.generations[0].text
+
+@app.post("/api/code-snippets")
+async def generate_code(request: dict):
+    text = request["transcription"]
+    code_snippets = generate_code_snippets(text)
+    return JSONResponse(content={"code_snippets": code_snippets})
+
+def generate_mermaid_diagram(text):
+    response = co.generate(
+        model='command-nightly',
+        prompt=f"Based on the following lecture content, generate a mermaid mindmap that will help reader understand the content in explained in the lecture content as given:\n{text}.",
+        max_tokens=500,
+        temperature=0.7
+    )
+    return response.generations[0].text
+
+@app.post("/api/mindmap")
+async def generate_mermaid(request: dict):
+    text = request["transcription"]
+    mermaid_diagram = generate_mermaid_diagram(text)
+    return JSONResponse(content={"mermaid_diagram": mermaid_diagram})
 
 # --- audio_transcription.py ---
 

@@ -282,17 +282,17 @@ export default function HomePage() {
     if (audioStream) {
       audioStream.getTracks().forEach(track => track.stop());
     }
-  
+
     cameraStream?.getTracks().forEach(function (track) {
       track.stop();
     });
-  
+
     localStorage.setItem("stop", "true");
-  
+
     setCameraStream(null);
     setAudioStream(null);
     setGeneratingNotes(false);
-  
+
     if (save) {
       try {
         // Process the summary to remove duplicate h1 headings and ensure alternating structure
@@ -313,7 +313,7 @@ export default function HomePage() {
             return acc + line + '\n';
           }
         }, '').trim();
-  
+
         await createLecture({
           title: title || 'Untitled Lecture',
           transcription: processedSummary,
@@ -377,6 +377,27 @@ export default function HomePage() {
       console.error('Error submitting question:', error);
     }
   };
+
+  const getMermaidGraph = async () => {
+    const lectureIndex = lectures?.findIndex(item => item._id === selectedNote);
+    if (lectureIndex === -1) return; // If lecture not found, exit
+
+    try {
+      const response = await fetch('http://localhost:8000/api/mindmap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transcription: lectures?.find(item => item._id === selectedNote)?.transcription }),
+      });
+      const graph = await response.json();
+      // update transciption with graph
+      // graph.mermaid_diagram should be used to update the transcription
+    }
+    catch (error) {
+      console.error('Error getting graph:', error);
+    }
+  }
 
   useEffect(() => {
     setQuestionHistory([]);
@@ -479,7 +500,10 @@ export default function HomePage() {
                         <Button onClick={startGeneratingNotes}>Start recording</Button>
                       )
                     ) : (
+                      <>
                       <Button variant="outline" onClick={() => setSelectedNote(null)}>Back to new note</Button>
+                      <Button variant="outline" onClick={getMermaidGraph}>Generate Mind Map</Button>
+                      </>
                     )}
                     {!selectedNote && generatingNotes && <>
                       <Button variant="destructive" onClick={() => stopRecording(false)}>
