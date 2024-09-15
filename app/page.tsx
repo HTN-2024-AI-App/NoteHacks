@@ -413,23 +413,22 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="min-h-[400px] flex-1 p-4 md:min-h-[640px] lg:min-h-[640px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[640px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
-
-                      <ReactMarkdown>
-                        {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
-                      </ReactMarkdown>
-                      {questionHistory.map((item, index) => {
-                        return (
-                          <div key={index}>
-                            <p>{index % 2 == 1 ? '[System]' : '[You]'}{' '}{item}</p>
-                          </div>
-                        );
-                      })}
-                      <div className="relative align-baseline">
-                        <QuestionMarkIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 size-6" />
-                        <form onSubmit={submitQuestion}>
-                          <Input type="text" placeholder="Got a question?" className="!pl-10 min-w-[20rem] bg-white" value={question} onChange={(e) => setQuestion(e.target.value)} />
-                        </form>
-                      </div>
+                    <ReactMarkdown>
+                      {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
+                    </ReactMarkdown>
+                    {questionHistory.map((item, index) => {
+                      return (
+                        <div key={index}>
+                          <p className="font-bold">{index % 2 == 1 ? '[System]' : '[You]'}{' '}<p className="font-normal"><ReactMarkdown>{item}</ReactMarkdown></p></p>
+                        </div>
+                      );
+                    })}
+                    <div className="relative align-baseline">
+                      <QuestionMarkIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 size-6" />
+                      <form onSubmit={submitQuestion}>
+                        <Input type="text" placeholder="Got a question?" className="!pl-10 min-w-[20rem] bg-white" value={question} onChange={(e) => setQuestion(e.target.value)} />
+                      </form>
+                    </div>
                   </div>
                 )}
                 <div className="flex items-center space-x-2">
