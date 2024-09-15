@@ -282,22 +282,41 @@ export default function HomePage() {
     if (audioStream) {
       audioStream.getTracks().forEach(track => track.stop());
     }
-
+  
     cameraStream?.getTracks().forEach(function (track) {
       track.stop();
     });
-
+  
     localStorage.setItem("stop", "true");
-
+  
     setCameraStream(null);
     setAudioStream(null);
     setGeneratingNotes(false);
-
+  
     if (save) {
       try {
+        // Process the summary to remove duplicate h1 headings and ensure alternating structure
+        const processedSummary = summary.split('\n').reduce((acc, line, index, arr) => {
+          if (line.startsWith('# ')) {
+            // If this is an h1 and the previous line was also an h1, skip this line
+            if (index > 0 && arr[index - 1].startsWith('# ')) {
+              return acc;
+            }
+            // If this is an h1 and the previous line was empty (meaning the line before that was a paragraph), add it
+            if (index === 0 || (index > 1 && arr[index - 1].trim() === '' && !arr[index - 2].startsWith('# '))) {
+              return acc + line + '\n';
+            }
+            // Otherwise, add an empty line before the h1
+            return acc + '\n' + line + '\n';
+          } else {
+            // For non-h1 lines (paragraphs), add them as is
+            return acc + line + '\n';
+          }
+        }, '').trim();
+  
         await createLecture({
           title: title || 'Untitled Lecture',
-          transcription: summary,
+          transcription: processedSummary,
         });
       } catch (error) {
         console.error('Error saving lecture:', error);
@@ -333,7 +352,7 @@ export default function HomePage() {
     });
   };
 
-  const submitQuestion = async (event) => {
+  const submitQuestion = async (event : React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     console.log(question);
     let context = lectures?.find(item => item._id === selectedNote)?.transcription || ''
