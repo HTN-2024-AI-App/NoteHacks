@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Lecture } from "../convex/posts";
 
-import { TrashIcon, MagnifyingGlassIcon, PersonIcon } from "@radix-ui/react-icons";
+import { TrashIcon, MagnifyingGlassIcon, PersonIcon, QuestionMarkIcon } from "@radix-ui/react-icons";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ import { Slider } from "@/components/ui/slider";
 import { ScreenSpinner } from "@/app/ScreenSpinner";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "./ModeToggle";
-import { useState, useRef, useEffect, ReactNode } from "react";
+import React, { useState, useRef, useEffect, ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import { Audiogram } from "@/components/ui/line-chart";
@@ -322,7 +322,7 @@ export default function HomePage() {
       return (
         <CollapsibleHeading
           key={index}
-          heading={heading} 
+          heading={heading}
           content={<p>{content}</p>}
           isOpen={index === sections.length - 1 ? isOpen : false}
           setIsOpen={setIsOpen}
@@ -331,6 +331,33 @@ export default function HomePage() {
     });
   };
 
+  const submitQuestion = async (event) => {
+    event.preventDefault();
+    console.log(question);
+    let context = lectures?.find(item => item._id === selectedNote)?.transcription || ''
+
+    try {
+      const response = await fetch('http://localhost:8000/api/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question, context, questionHistory }),
+      });
+
+      const answer = await response.json();
+      setQuestionHistory([...questionHistory, question, answer.response]);
+      setQuestion("");
+
+      return answer;
+    } catch (error) {
+      console.error('Error submitting question:', error);
+    }
+  };
+
+  useEffect(() => {
+    setQuestionHistory([]);
+  }, [selectedNote]);
 
   return isAuthenticated ? (
     <>
@@ -412,10 +439,25 @@ export default function HomePage() {
                     {renderSummary()}
                   </div>
                 ) : (
+
+                  // TODO: CHAT BOX that is currently integrated with the notes lol
                   <div className="min-h-[400px] flex-1 p-4 md:min-h-[640px] lg:min-h-[640px] bg-gray-200 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 prose dark:prose-invert max-h-[640px] overflow-y-scroll !max-w-full prose-headings:mt-0 prose-headings:mb-4 prose-p:mt-0 prose-p:mb-2 !leading-snug">
                     <ReactMarkdown>
                       {lectures?.find(item => item._id === selectedNote)?.transcription || ''}
                     </ReactMarkdown>
+                    {questionHistory.map((item, index) => {
+                      return (
+                        <div key={index}>
+                          <p className="font-bold">{index % 2 == 1 ? '[System]' : '[You]'}{' '}<p className="font-normal"><ReactMarkdown>{item}</ReactMarkdown></p></p>
+                        </div>
+                      );
+                    })}
+                    <div className="relative align-baseline">
+                      <QuestionMarkIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 size-6" />
+                      <form onSubmit={submitQuestion}>
+                        <Input type="text" placeholder="Got a question?" className="!pl-10 min-w-[20rem] bg-white" value={question} onChange={(e) => setQuestion(e.target.value)} />
+                      </form>
+                    </div>
                   </div>
                 )}
                 <div className="flex items-center space-x-2">

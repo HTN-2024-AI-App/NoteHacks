@@ -143,6 +143,27 @@ async def summarize_audio(conciseness_delta=0):
     return JSONResponse(content={"summary": curr_summary})
 
 
+## -- ask a question --
+@app.post("/api/ask")
+async def ask_question(request: dict):
+    print(request)
+    context, question, history = request["context"], request["question"], request["questionHistory"]
+    res = client.chat.completions.create(
+        messages=[
+            {
+                "role": "system",
+                "content": f"You are given the following context: '{context}' and the user is giving you inputs based on this context. The conversation, starting from the user and alternating with the system, has been: '{history}'."
+            },
+            {
+                "role": "user",
+                "content": question
+            },
+        ],
+        model="llama3-8b-8192",
+    )
+    return JSONResponse(content={"response": res.choices[0].message.content})
+
+
 # --- facedetection.py --
 
 # Load pre-trained Haar cascades for face and eye detection
