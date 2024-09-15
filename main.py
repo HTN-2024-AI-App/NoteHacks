@@ -147,12 +147,12 @@ async def summarize_audio(conciseness_delta=0):
 @app.post("/api/ask")
 async def ask_question(request: dict):
     print(request)
-    context, question = request["context"], request["question"]
+    context, question, history = request["context"], request["question"], request["questionHistory"]
     res = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": f"You are given the following context: '{context}' and the user is giving you inputs based on this context."
+                "content": f"You are given the following context: '{context}' and the user is giving you inputs based on this context. The conversation, starting from the user and alternating with the system, has been: '{history}'."
             },
             {
                 "role": "user",
