@@ -1,14 +1,15 @@
 import React, { useState, ReactNode } from 'react';
 import { ChevronRightIcon, ChevronDownIcon } from '@radix-ui/react-icons';
 
+
 interface CollapsibleHeadingProps {
     heading: string;
-    content: ReactNode;
+    content: React.ReactNode;
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
 }
 
-const CollapsibleHeading: React.FC<CollapsibleHeadingProps> = ({ heading, content }) => {
-    const [isOpen, setIsOpen] = useState<boolean>(false);
-
+const CollapsibleHeading: React.FC<CollapsibleHeadingProps> = ({ heading, content, isOpen, setIsOpen }) => {
     const toggleOpen = (): void => setIsOpen(!isOpen);
 
     return (
@@ -18,7 +19,7 @@ const CollapsibleHeading: React.FC<CollapsibleHeadingProps> = ({ heading, conten
                 onClick={toggleOpen}
             >
                 {isOpen ? (
-                    <ChevronDownIcon className="mr-2" />
+                    <ChevronDownIcon className="mr-2" /> 
                 ) : (
                     <ChevronRightIcon className="mr-2" />
                 )}
@@ -32,5 +33,6 @@ const CollapsibleHeading: React.FC<CollapsibleHeadingProps> = ({ heading, conten
         </div>
     );
 };
+
 
 export default CollapsibleHeading;

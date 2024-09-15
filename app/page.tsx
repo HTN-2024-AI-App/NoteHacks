@@ -88,6 +88,7 @@ export default function HomePage() {
   const [transcription, setTranscription] = useState("");
   const [summary, setSummary] = useState("");
   const createLecture = useMutation(api.posts.createLecture);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (cameraStream && videoRef.current) {
@@ -154,6 +155,8 @@ export default function HomePage() {
             }
             setConcision([0.25]);
           } else if (gestureData.handsPrayer) { // Slow down
+            console.log("Prayer hands detected");
+            setIsOpen(true);
             setConcision([0.25]);
           } else if (gestureData.fist) { // Speed up
             setConcision([0.75]);
@@ -286,11 +289,12 @@ export default function HomePage() {
 
     // Split sections and filter out empty lines
 
-    const sections = summary.split('#').filter(section => section.trim() !== '' || section !== "#");
+    const sections = summary.split('#').filter(section => section.trim() !== '' || section !== "#").filter(section => section.trim() !== '' || section.length > 1);
+
+
 
     return sections.map((section, index) => {
       // Split each section into heading and content, filtering out empty content lines
-      if (section.trim() === '' || section.length <= 1) return null;
       const [heading, ...contentLines] = section.split('\n').filter(line => line.trim() !== '');
       const content = contentLines.join(' '); // Join content lines into a single paragraph
 
@@ -299,8 +303,10 @@ export default function HomePage() {
       return (
         <CollapsibleHeading
           key={index}
-          heading={heading}
+          heading={heading} 
           content={<p>{content}</p>}
+          isOpen={index === sections.length - 1 ? isOpen : false}
+          setIsOpen={setIsOpen}
         />
       );
     });
