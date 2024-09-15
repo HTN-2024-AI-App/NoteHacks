@@ -45,6 +45,10 @@ export default function HomePage() {
     }
   }, [distractionMode]);
 
+  useEffect(() => {
+    localStorage.removeItem("stop");
+  }, []);
+
   // similar for concision
   useEffect(() => {
     if (concision) {
@@ -168,6 +172,7 @@ export default function HomePage() {
   }, [generatingNotes, BACKEND_ROOT_URL]);
 
   const startGeneratingNotes = async () => {
+    localStorage.removeItem("stop");
     setGeneratingNotes(true);
     if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
       try {
@@ -229,7 +234,7 @@ export default function HomePage() {
     formData.append('file', audioBlob, 'audio.wav');
 
     try {
-      if (localStorage.getItem("concision") && parseFloat(localStorage.getItem("concision")!) < 1) {
+      if (localStorage.getItem("concision") && parseFloat(localStorage.getItem("concision")!) < 1 && localStorage.getItem("stop") !== "true") {
         const response = await fetch('http://localhost:8000/api/transcribe', {
           method: 'POST',
           body: formData,
@@ -255,6 +260,8 @@ export default function HomePage() {
     cameraStream?.getTracks().forEach(function (track) {
       track.stop();
     });
+
+    localStorage.setItem("stop", "true");
 
     setCameraStream(null);
     setAudioStream(null);
