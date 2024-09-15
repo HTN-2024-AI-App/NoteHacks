@@ -36,6 +36,27 @@ export default function HomePage() {
   const [distractionMode, setDistractionMode] = useState(false);
   const [title, setTitle] = useState("");
 
+  const { toast } = useToast();
+
+  const lectures = useQuery(api.posts.allLectures);
+  const [selectedNote, setSelectedNote] = useState<Id<"lectures"> | null>(null);
+
+  const [search, setSearch] = useState("");
+
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+  const [audioData, setAudioData] = useState<number[]>(new Array(200).fill(100));
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const isLookingHistory = useRef<boolean[]>([]);
+
+
+  const [transcription, setTranscription] = useState("");
+  const [summary, setSummary] = useState("");
+  const createLecture = useMutation(api.posts.createLecture);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+
   // use effect distraction mode localStorage setItem
   useEffect(() => {
     if (distractionMode) {
@@ -69,26 +90,26 @@ export default function HomePage() {
     "Unpause": "👍",
   };
 
-  const { toast } = useToast();
-
-  const lectures = useQuery(api.posts.allLectures);
-  const [selectedNote, setSelectedNote] = useState<Id<"lectures"> | null>(null);
-
-  const [search, setSearch] = useState("");
-
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
-  const [audioData, setAudioData] = useState<number[]>(new Array(200).fill(100));
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const isLookingHistory = useRef<boolean[]>([]);
 
 
-  const [transcription, setTranscription] = useState("");
-  const [summary, setSummary] = useState("");
-  const createLecture = useMutation(api.posts.createLecture);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const handleActionButton = (action: string) => {
+    switch (action) {
+      case "Slow down":
+        setIsOpen(true);
+        setConcision([0.25]);
+        break;
+      case "Speed up":
+        setIsOpen(false);
+        setConcision([0.5]);
+        break;
+      case "Pause":
+        setConcision([1]);
+        break;
+      case "Unpause":
+        setConcision([0.5]);
+        break;
+    }
+  };
 
   useEffect(() => {
     if (cameraStream && videoRef.current) {
@@ -291,8 +312,6 @@ export default function HomePage() {
 
     const sections = summary.split('#').filter(section => section.trim() !== '' || section !== "#").filter(section => section.trim() !== '' || section.length > 1);
 
-
-
     return sections.map((section, index) => {
       // Split each section into heading and content, filtering out empty content lines
       const [heading, ...contentLines] = section.split('\n').filter(line => line.trim() !== '');
@@ -367,14 +386,24 @@ export default function HomePage() {
                   />
                 </div>
 
-                <div className="flex flex-row gap-x-3 flex-nowrap items-center">
-                  {Object.entries(signalSupport).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between gap-x-2" onClick={() => setSignalSupport(prev => ({ ...prev, [key]: !value }))}>
-                      <Checkbox checked={value} className="accent-black cursor-pointer" id={key} />
-                      <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-row gap-x-3 flex-nowrap items-start">
+            {Object.entries(signalSupport).map(([key, value]) => (
+              <div key={key} className="flex flex-col items-center justify-between gap-y-2">
+                <div className="flex items-center justify-between gap-x-2" >
+                  <Checkbox checked={value} className="accent-black cursor-pointer" id={key} onClick={() => setSignalSupport(prev => ({ ...prev, [key]: !value }))} />
+                  {/* <Label className="flex items-center gap-x-2 w-max flex-nowrap text-nowrap" htmlFor={key}>{key} {nameEmojiMap[key]}</Label> */}
+                    <Button 
+                      onClick={() => handleActionButton(key)}
+                      className="w-full flex items-center justify-center flex-nowrap text-nowrap"
+                      variant="outline"
+                      size="sm"
+                      >
+                      {key} {nameEmojiMap[key]}
+                    </Button>
+                  </div>
+              </div>
+            ))}
+          </div>
 
               </div>
               <div className="flex flex-col space-y-4 w-full">
