@@ -344,7 +344,7 @@ export default function HomePage() {
         <CollapsibleHeading
           key={index}
           heading={heading}
-          content={<p>{content}</p>}
+          content={<p>{content + '\n'}</p>}
           isOpen={index === sections.length - 1 ? isOpen : false}
           setIsOpen={setIsOpen}
         />
