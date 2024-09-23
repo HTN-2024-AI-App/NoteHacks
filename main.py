@@ -45,15 +45,15 @@ async def transcribe_audio_stream(audio_chunk):
         return ""
 
 
-def summarize(old_summary: str, text_chunks: List[str], conciseness_delta: int = 0) -> str:
+def summarize(
+    old_summary: str, text_chunks: List[str], conciseness_delta: int = 0
+) -> str:
     conciseness_delta = int(conciseness_delta)
     if conciseness_delta == 0:
         change_conciseness = ""
     else:
         delta = "more" if conciseness_delta < 0 else "less"
         change_conciseness = f"Make this new text passage {delta} detailed."
-
-    prev_summary = f"<previous_key_sentences> '{old_summary}' </previous_key_sentences>"
 
     completion = client.chat.completions.create(
         messages=[
@@ -62,43 +62,37 @@ def summarize(old_summary: str, text_chunks: List[str], conciseness_delta: int =
                 "content": """
                     You will be given a text to summarize. Follow these steps:
 
-                    1. At the beginning of the user input, you'll find a list of previously summarized points enclosed in <previous_key_sentences> tags. Copy this content exactly as it appears, without the tags, at the beginning of your response.
-
-                    2. Read the new text provided after the previous summary and create a new summary point:
-                    a. Write an informative heading that clearly indicates the main topic or key idea of the following paragraph.
+                    1. Output a single heading and paragraph, these should summarize the information in the provided text
+                    a. Write an informative heading that clearly indicates the main topic or key idea of the provided text.
                     b. Write a concise paragraph summarizing the main points of the new text.
 
-                    3. If the new text is closely related to the immediately preceding point, instead of adding a new heading and paragraph, modify the existing one to incorporate the new information.
-
-                    4. Format the entire summary as a Markdown document:
+                    2. Format the entire summary as a Markdown document:
                     - Use only H2 (##) for headings. No other heading levels are allowed.
                     - Use regular text for paragraphs. Each heading should be followed by a paragraph.
                     - Always follow a heading with a paragraph
                     - Separate each heading and paragraph with a blank line
 
-                    5. Ensure each heading is detailed and informative, providing a clear idea of the paragraph's content without needing to read it.
+                    3. Ensure each heading is detailed and informative, providing a clear idea of the paragraph's content without needing to read it.
 
-                    6. Keep each paragraph concise and focused on the main points of the text.
+                    4. Keep each paragraph concise and focused on the main points of the text.
 
-                    7. Your response should contain only:
-                    a. The previous key sentences (without tags)
-                    b. The new or updated summary point
+                    5. Your response should contain only:
+                    a. The new or updated summary point
                     Both formatted in Markdown as described above. Do not include any additional explanations or comments.""",
             },
             {
                 "role": "user",
-                "content": f"""{prev_summary}\n
-                            text: {' '.join(text_chunks)}.\n
-                            {change_conciseness}""",
+                "content": f"""
+                            text: {' '.join(text_chunks)}""",
             },
         ],
         model="llama3-8b-8192",
+        max_tokens=5000,  # Set your desired maximum token output size here
     )
-
 
     content = completion.choices[0].message.content
 
-    content = content.replace("<previous_key_sentences>", "").replace("</previous_key_sentences>", "").strip()
+    content = old_summary + content
     print("CONTENT", content)
 
     return content
@@ -147,17 +141,18 @@ async def summarize_audio(conciseness_delta=0):
 @app.post("/api/ask")
 async def ask_question(request: dict):
     print(request)
-    context, question, history = request["context"], request["question"], request["questionHistory"]
+    context, question, history = (
+        request["context"],
+        request["question"],
+        request["questionHistory"],
+    )
     res = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": f"You are given the following context: '{context}' and the user is giving you inputs based on this context. The conversation, starting from the user and alternating with the system, has been: '{history}'."
+                "content": f"You are given the following context: '{context}' and the user is giving you inputs based on this context. The conversation, starting from the user and alternating with the system, has been: '{history}'.",
             },
-            {
-                "role": "user",
-                "content": question
-            },
+            {"role": "user", "content": question},
         ],
         model="llama3-8b-8192",
     )
